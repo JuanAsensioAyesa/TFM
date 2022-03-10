@@ -29,7 +29,7 @@ list(APPEND CMAKE_MODULE_PATH "/usr/local/lib/cmake/OpenVDB/")
 find_package(OpenVDB REQUIRED)
 #find_package(nanoVDB REQUIRED)
 
-add_executable(TFM nanoVdb.cc pruebaThrust.cu)
+add_executable(TFM nanoVdb.cc )
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Install rules.

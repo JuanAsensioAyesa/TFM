@@ -32,5 +32,5 @@
 void launch_kernels(const nanovdb::NanoGrid<float>* deviceGrid,
                                const nanovdb::NanoGrid<float>* cpuGrid,
                                cudaStream_t                    stream);
-
+//void scaleActiveVoxels(nanovdb::FloatGrid *grid_d, uint64_t leafCount, float scale);
 #endif //CUDACMAKE_TEST_H
