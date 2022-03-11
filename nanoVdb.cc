@@ -12,7 +12,7 @@
 #include <openvdb/tools/ValueTransformer.h>
 #include <openvdb/Types.h>
 #include <iostream>
-float average_surrounding(const openvdb::FloatGrid::ValueOnCIter& iter,const openvdb::FloatGrid::Accessor& accessor){
+float average_surrounding(const openvdb::FloatGrid::ValueOnCIter& iter){
     auto vec = iter.getCoord().asVec3i();
     int incrementos[] = {-1,0,1};
     int len_incrementos = 3;
@@ -32,7 +32,7 @@ float average_surrounding(const openvdb::FloatGrid::ValueOnCIter& iter,const ope
                 new_vec[2] = vec[2]+incremento_z;
 
                 new_coord = openvdb::Coord(new_vec);
-                accum += accessor.getValue(new_coord);
+                accum += iter.getTree()->getValue(new_coord);
                 
             }
         }
@@ -59,8 +59,8 @@ struct Local {
     static inline void opAverage(const openvdb::FloatGrid::ValueOnCIter& iter,openvdb::FloatGrid::Accessor& accessor) {
         
         auto coords = iter.getCoord();
-        accessor.setValue(coords,0);
-        
+        accessor.setValue(coords,average_surrounding(iter));
+       
     }
 };
 template<class GridType>
@@ -192,9 +192,11 @@ int main()
         //std::cout << "Value after scaling  = " << handle.grid<float>()->tree().getValue(nanovdb::Coord(101,0,0)) << std::endl;
         openvdb::FloatGrid::Ptr outGrid = openvdb::FloatGrid::create(2.0);
         
-        openvdb::tools::transformValues(grid->cbeginValueOn(),*outGrid,Local::opCopia);
-        
-            openvdb::tools::transformValues(outGrid->cbeginValueOn(),*outGrid,Local::opAverage);
+        //openvdb::tools::transformValues(grid->cbeginValueOn(),*outGrid,Local::opCopia);
+        for(int i = 0 ;i<100;i++){
+            openvdb::tools::transformValues(grid->cbeginValueOn(),*outGrid,Local::opAverage);
+        }
+        //openvdb::tools::transformValues(grid->cbeginValueOn(),*outGrid,Local::opAverage);
         
         
         openvdb::io::File file("mygrids.vdb");
