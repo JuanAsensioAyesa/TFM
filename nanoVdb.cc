@@ -38,7 +38,9 @@ float average_surrounding(const openvdb::FloatGrid::ValueOnCIter& iter,openvdb::
             }
         }
     }
+    //std::cout<<vec<<std::endl;
     accum = accum /(len_incrementos * len_incrementos * len_incrementos);
+    
     return accum;
 }
 /**
@@ -209,12 +211,15 @@ int main()
         int profundidad_total = 150;
         openvdb::Coord coordenadas;
         createSkin(*grid,size_lado,profundidad_total,coordenadas);
-        
+        using GridT = nanovdb::FloatGrid;
         // Converts the OpenVDB to NanoVDB and returns a GridHandle that uses CUDA for memory management.
-        //auto handle = nanovdb::openToNanoVDB<nanovdb::CudaDeviceBuffer>(*grid);
+        auto handle = nanovdb::openToNanoVDB<nanovdb::CudaDeviceBuffer>(*grid);
 
-        
-        
+        handle.deviceUpload(0, false); // Copy the NanoVDB grid to the GPU asynchronously
+        const GridT* grid2 = handle.grid<float>(); // get a (raw) const pointer to a NanoVDB grid of value type float on the CPU
+        GridT* deviceGrid = handle.deviceGrid<float>(); // get a (raw) pointer to a NanoVDB grid of value type float on the GPU
+        setZero(deviceGrid, grid2->tree().nodeCount(0));
+        handle.deviceDownload(0, true); // Copy the NanoVDB grid to the CPU synchronously
         // cudaStream_t stream; // Create a CUDA stream to allow for asynchronous copy of pinned CUDA memory.
         // cudaStreamCreate(&stream);
         // handle.deviceUpload(stream,false);
@@ -234,36 +239,36 @@ int main()
         //std::cout << "Value after scaling  = " << handle.grid<float>()->tree().getValue(nanovdb::Coord(101,0,0)) << std::endl;
         int media_width = 20;//40 de ancho
         int media_depth = 10;//20 de profundidad
-        openvdb::Coord coords_nuevas(-250/2+media_width,-profundidad_total/2+media_depth,-250/2+media_width);
-        make_layer(*grid,media_width*2,media_depth*2,coords_nuevas,10.0);
-        openvdb::FloatGrid::Ptr outGrid = openvdb::FloatGrid::create(2.0);
-        openvdb::FloatGrid::Ptr readGrid;
-        openvdb::FloatGrid::Ptr writeGrid;
-        for(int i = 0 ;i<10;i++){
-            if(i%2==0){
-                readGrid = grid;
-                writeGrid = outGrid;
-            }else{
-                readGrid = outGrid;
-                outGrid = grid;
-            }
-            promediate(*readGrid,*writeGrid,size_lado,profundidad_total);
-        }
+        // openvdb::Coord coords_nuevas(-250/2+media_width,-profundidad_total/2+media_depth,-250/2+media_width);
+        // make_layer(*grid,media_width*2,media_depth*2,coords_nuevas,10.0);
+        // openvdb::FloatGrid::Ptr outGrid = openvdb::FloatGrid::create(2.0);
+        // openvdb::FloatGrid::Ptr readGrid;
+        // openvdb::FloatGrid::Ptr writeGrid;
+        // for(int i = 0 ;i<10;i++){
+        //     if(i%2==0){
+        //         readGrid = grid;
+        //         writeGrid = outGrid;
+        //     }else{
+        //         readGrid = outGrid;
+        //         outGrid = grid;
+        //     }
+        //     promediate(*readGrid,*writeGrid,size_lado,profundidad_total);
+        // }
         
         
-        // for(int i = 20 ;i<11;i++){
+        // for(int i = 0 ;i<101;i++){
         //     std::cout<<i<<std::endl;
-        //     // if(i%2 == 0 ){
-        //     //     readGrid = grid;
-        //     //     writeGrid = outGrid;
-        //     // }else{
-        //     //     readGrid = outGrid;
-        //     //     writeGrid = grid;
-        //     // }
+        //     if(i%2 == 0 ){
+        //         readGrid = grid;
+        //         writeGrid = outGrid;
+        //     }else{
+        //         readGrid = outGrid;
+        //         writeGrid = grid;
+        //     }
         //     // openvdb::tools::transformValues(readGrid->cbeginValueOn(),*writeGrid,Local::opAverage);
-        //     openvdb::tools::transformValues(grid->cbeginValueOn(),*outGrid,Local::opSet);
-        //     //openvdb::tools::transformValues(grid->cbeginValueOn(),*outGrid,Local::opAverage);
-        //     openvdb::tools::transformValues(outGrid->cbeginValueOn(),*grid,Local::opCopia);
+        //     //openvdb::tools::transformValues(grid->cbeginValueOn(),*outGrid,Local::opSet);
+        //     openvdb::tools::transformValues(readGrid->cbeginValueOn(),*writeGrid,Local::opAverage,true);
+        //     //openvdb::tools::transformValues(outGrid->cbeginValueOn(),*grid,Local::opCopia);
         //     //openvdb::tools::transformValues(grid->cbeginValueOn(),*outGrid,Local::opSet);
 
         // }
@@ -273,14 +278,14 @@ int main()
         // //std::cout<<"Active "<<cont<<" Total:"<<size_lado*size_lado*profundidad_total<<std::endl;
         //openvdb::Coord coords_nuevas_2(0,-profundidad_total-100,0);
         //createSkin(*outGrid,size_lado,profundidad_total,coords_nuevas_2);
-        openvdb::io::File file("mygrids.vdb");
-        // Add the grid pointer to a container.
-        openvdb::GridPtrVec grids;
-        //grids.push_back(grid);
-        grids.push_back(outGrid);
-        // Write out the contents of the container.
-        file.write(grids);
-        file.close();
+        // openvdb::io::File file("mygrids.vdb");
+        // // Add the grid pointer to a container.
+        // openvdb::GridPtrVec grids;
+        // //grids.push_back(grid);
+        // grids.push_back(outGrid);
+        // // Write out the contents of the container.
+        // file.write(grids);
+        // file.close();
     }
     catch (const std::exception& e) {
         std::cerr << "An exception occurred: \"" << e.what() << "\"" << std::endl;
