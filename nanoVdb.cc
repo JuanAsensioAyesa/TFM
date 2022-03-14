@@ -200,6 +200,24 @@ void promediate(GridType& gridSource,GridType& gridDestiny,int size_lado,int pro
     }
     
 }
+void copyNanoToOpen(const nanovdb::FloatGrid* gridNano,openvdb::FloatGrid& gridOpen,int size_lado,int profundidad_total){
+    openvdb::Coord coordenadas_open;
+    nanovdb::Coord coordenadas_nano;
+
+    auto accessor_nano = gridNano->getAccessor();
+    auto accessor_open = gridOpen.getAccessor();
+
+    for(int i  =0;i>-size_lado;i--){
+        for(int j = 0 ;j>-profundidad_total;j--){
+            for(int k = 0 ;k>-size_lado;k--){
+                coordenadas_nano = nanovdb::Coord(i,j,k);
+                coordenadas_open = openvdb::Coord(i,j,k);
+                
+                accessor_open.setValue(coordenadas_open,accessor_nano.getValue(coordenadas_nano));
+            }
+        }
+    }
+}
 /// @brief This examples depends on OpenVDB, NanoVDB and CUDA.
 int main()
 {
@@ -207,40 +225,48 @@ int main()
         // Create an OpenVDB grid of a sphere at the origin with radius 100 and voxel size 1.
     openvdb::FloatGrid::Ptr grid =
        openvdb::FloatGrid::create(/*background value=*/2.0);
+    openvdb::FloatGrid::Ptr grid2Open =
+       openvdb::FloatGrid::create(/*background value=*/2.0);
         int size_lado = 250;
         int profundidad_total = 150;
         openvdb::Coord coordenadas;
         createSkin(*grid,size_lado,profundidad_total,coordenadas);
+        createSkin(*grid2Open,size_lado,profundidad_total,coordenadas);
+        int media_width = 20;//40 de ancho
+        int media_depth = 10;//20 de profundidad
+        openvdb::Coord coords_nuevas(-250/2+media_width,-profundidad_total/2+media_depth,-250/2+media_width);
+        make_layer(*grid,media_width*2,media_depth*2,coords_nuevas,10.0);
         using GridT = nanovdb::FloatGrid;
         // Converts the OpenVDB to NanoVDB and returns a GridHandle that uses CUDA for memory management.
         auto handle = nanovdb::openToNanoVDB<nanovdb::CudaDeviceBuffer>(*grid);
-
-        handle.deviceUpload(0, false); // Copy the NanoVDB grid to the GPU asynchronously
+        auto handle2 = nanovdb::openToNanoVDB<nanovdb::CudaDeviceBuffer>(*grid2Open);
+        handle.deviceUpload(0,true); // Copy the NanoVDB grid to the GPU asynchronously
+        handle2.deviceUpload(0, true); // Copy the NanoVDB grid to the GPU asynchronously
         const GridT* grid2 = handle.grid<float>(); // get a (raw) const pointer to a NanoVDB grid of value type float on the CPU
         GridT* deviceGrid = handle.deviceGrid<float>(); // get a (raw) pointer to a NanoVDB grid of value type float on the GPU
-        setZero(deviceGrid, grid2->tree().nodeCount(0));
+        GridT* deviceGrid2 = handle2.deviceGrid<float>(); // get a (raw) pointer to a NanoVDB grid of value type float on the GPU
+        GridT* readGridNano= deviceGrid;
+        GridT* writeGridNano = deviceGrid2;
+        for(int i = 0 ;i<1001;i++){
+            std::cout<<i<<std::endl;
+            if(i%2==0){
+                readGridNano= deviceGrid;
+                writeGridNano = deviceGrid2;
+            }else{
+                readGridNano= deviceGrid2;
+                writeGridNano = deviceGrid;
+            }
+            average(readGridNano, writeGridNano,grid2->tree().nodeCount(0));
+            //scaleActiveVoxels(readGridNano,grid2->tree().nodeCount(0),0.5);
+        }
+        
         handle.deviceDownload(0, true); // Copy the NanoVDB grid to the CPU synchronously
-        // cudaStream_t stream; // Create a CUDA stream to allow for asynchronous copy of pinned CUDA memory.
-        // cudaStreamCreate(&stream);
-        // handle.deviceUpload(stream,false);
-        // scaleActiveVoxels(handle.deviceGrid<float>(),handle.grid<float>()->tree().nodeCount(0),0.0f);
-        // handle.deviceDownload(0, true); // Copy the NanoVDB grid to the CPU synchronouslys
-        //handle.deviceUpload(stream, false); // Copy the NanoVDB grid to the GPU asynchronously
-
-        //auto* grid = handle.grid<float>(); // get a (raw) pointer to a NanoVDB grid of value type float on the CPU
-       // auto* deviceGrid = handle.deviceGrid<float>(); // get a (raw) pointer to a NanoVDB grid of value type float on the GPU
-
-        // if (!deviceGrid || !grid)
-        //     throw std::runtime_error("GridHandle did not contain a grid with value type float");
-
-        //launch_kernels(deviceGrid, grid, stream); // Call a host method to print a grid value on both the CPU and GPU
+        handle2.deviceDownload(0,true);
 
         //cudaStreamDestroy(stream); // Destroy the CUDA stream
         //std::cout << "Value after scaling  = " << handle.grid<float>()->tree().getValue(nanovdb::Coord(101,0,0)) << std::endl;
-        int media_width = 20;//40 de ancho
-        int media_depth = 10;//20 de profundidad
-        // openvdb::Coord coords_nuevas(-250/2+media_width,-profundidad_total/2+media_depth,-250/2+media_width);
-        // make_layer(*grid,media_width*2,media_depth*2,coords_nuevas,10.0);
+        
+        
         // openvdb::FloatGrid::Ptr outGrid = openvdb::FloatGrid::create(2.0);
         // openvdb::FloatGrid::Ptr readGrid;
         // openvdb::FloatGrid::Ptr writeGrid;
@@ -278,14 +304,17 @@ int main()
         // //std::cout<<"Active "<<cont<<" Total:"<<size_lado*size_lado*profundidad_total<<std::endl;
         //openvdb::Coord coords_nuevas_2(0,-profundidad_total-100,0);
         //createSkin(*outGrid,size_lado,profundidad_total,coords_nuevas_2);
-        // openvdb::io::File file("mygrids.vdb");
-        // // Add the grid pointer to a container.
-        // openvdb::GridPtrVec grids;
-        // //grids.push_back(grid);
-        // grids.push_back(outGrid);
-        // // Write out the contents of the container.
-        // file.write(grids);
-        // file.close();
+        std::cout<<"Pre copy"<<std::endl;
+        copyNanoToOpen(grid2,*grid,size_lado,profundidad_total);
+        std::cout<<"Post copy"<<std::endl;
+        openvdb::io::File file("mygrids.vdb");
+        // Add the grid pointer to a container.
+        openvdb::GridPtrVec grids;
+        //grids.push_back(grid);
+        grids.push_back(grid);
+        // Write out the contents of the container.
+        file.write(grids);
+        file.close();
     }
     catch (const std::exception& e) {
         std::cerr << "An exception occurred: \"" << e.what() << "\"" << std::endl;
