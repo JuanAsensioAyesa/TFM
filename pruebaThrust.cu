@@ -112,7 +112,7 @@ void average(nanovdb::FloatGrid *grid_source,nanovdb::FloatGrid *grid_destiny,ui
             //printf("%d %f %f %f\n",i,vec[0],coord[1],vec[2]);
             auto acc = grid_source->tree().getAccessor();
             auto acc_destiny = grid_destiny->tree().getAccessor();
-            
+            int incrementadas = 0 ;
             for(int i_incremento_x = 0;i_incremento_x<len_incrementos;i_incremento_x++){
                 for(int i_incremento_y = 0 ;i_incremento_y<len_incrementos;i_incremento_y++){
                     for(int i_incremento_z = 0 ;i_incremento_z<len_incrementos;i_incremento_z++){
@@ -125,18 +125,22 @@ void average(nanovdb::FloatGrid *grid_source,nanovdb::FloatGrid *grid_destiny,ui
                         // new_vec[1] = vec[1]+incremento_y;
                         // new_vec[2] = vec[2]+incremento_z;
 
+                        if(acc.isActive(coord.offsetBy(incremento_x,incremento_y,incremento_z))){
+                            float aux = acc.getValue(coord.offsetBy(incremento_x,incremento_y,incremento_z));
+                            accum += aux;
+                            incrementadas++;
+                        }
                         
-                        float aux = acc.getValue(coord.offsetBy(incremento_x,incremento_y,incremento_z));
                         
                         
-                        accum += aux;
+                        
                         
                         
                     }
                 }
             }
             //std::cout<<vec<<std::endl;
-            accum = accum /(len_incrementos * len_incrementos * len_incrementos);
+            accum = accum /incrementadas;
             //printf("%f \n",accum);
             //printf("%f\n",accum);
             //acc.setValue(coord,accum);

@@ -247,7 +247,7 @@ int main()
         GridT* deviceGrid2 = handle2.deviceGrid<float>(); // get a (raw) pointer to a NanoVDB grid of value type float on the GPU
         GridT* readGridNano= deviceGrid;
         GridT* writeGridNano = deviceGrid2;
-        for(int i = 0 ;i<1001;i++){
+        for(int i = 0 ;i<101;i++){
             std::cout<<i<<std::endl;
             if(i%2==0){
                 readGridNano= deviceGrid;

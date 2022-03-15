@@ -29,7 +29,7 @@ list(APPEND CMAKE_MODULE_PATH "/usr/local/lib/cmake/OpenVDB/")
 find_package(OpenVDB REQUIRED)
 #find_package(nanoVDB REQUIRED)
 
-add_executable(TFM nanoVdb.cc pruebaThrust.cu)
+add_executable(TFM main.cc kernels.cu)
 
 target_compile_options(TFM PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:              
                         
