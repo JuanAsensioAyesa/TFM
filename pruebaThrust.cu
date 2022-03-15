@@ -132,10 +132,6 @@ void average(nanovdb::FloatGrid *grid_source,nanovdb::FloatGrid *grid_destiny,ui
                         }
                         
                         
-                        
-                        
-                        
-                        
                     }
                 }
             }

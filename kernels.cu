@@ -36,3 +36,58 @@ void generateEndothelial(nanovdb::FloatGrid *grid_d, uint64_t leafCount, int lim
     thrust::counting_iterator<uint64_t, thrust::device_system_tag> iter(0);
     thrust::for_each(iter, iter + 512*leafCount, kernel);
 }
+
+/**
+ * @brief Implementa la ecuacion en diferencias relacionada con el TAF 
+ *  (Ecuacion 8)
+ * 
+ */
+void equationTAF(nanovdb::FloatGrid* input_grid_endothelial,nanovdb::FloatGrid* input_grid_TAF,nanovdb::FloatGrid* output_grid_TAF,uint64_t leafCount){
+    auto kernel = [input_grid_endothelial,input_grid_TAF,output_grid_TAF] __device__ (const uint64_t n){
+        auto *leaf_d = output_grid_TAF->tree().getFirstNode<0>() + (n >> 9);// this only works if grid->isSequential<0>() == true
+        const int i = n & 511;
+
+        //Coordenadas del voxel globales
+        auto coord = leaf_d->offsetToGlobalCoord(i);
+        auto accessor_endothelial = input_grid_endothelial->tree().getAccessor();
+        auto accessor_TAF_in = input_grid_TAF->tree().getAccessor();
+        auto accessor_TAF_out = output_grid_TAF->tree().getAccessor();
+        int incrementos_vecinos[] = {-1,0,1};
+        int len_incrementos = 3;
+        
+        float n_i = 0;
+        bool esVecino = false;
+        //Se calcula n_i , que determina si se es vecino de una endothelial
+        for(int i_incremento_x = 0;i_incremento_x<len_incrementos && !esVecino;i_incremento_x++){
+            for(int i_incremento_y = 0 ;i_incremento_y<len_incrementos && !esVecino;i_incremento_y++){
+                for(int i_incremento_z = 0 ;i_incremento_z<len_incrementos && !esVecino;i_incremento_z++){
+                    int incremento_x = incrementos_vecinos[i_incremento_x];
+                    int incremento_y = incrementos_vecinos[i_incremento_y];
+                    int incremento_z = incrementos_vecinos[i_incremento_z];
+
+
+                    if(accessor_endothelial.isActive(coord.offsetBy(incremento_x,incremento_y,incremento_z))){
+                        n_i = accessor_endothelial.getValue(coord.offsetBy(incremento_x,incremento_y,incremento_z));
+                        
+                    }
+                    esVecino = n_i != 0.0;//Esto igual esta feo
+                    
+                }
+            }
+        }
+
+        float n_c = 0.025;
+        //printf("%f\n",n_i);
+
+        float c = accessor_TAF_in.getValue(coord);
+
+        float new_c = -n_c * n_i * c;
+
+        leaf_d->setValueOnly(i,new_c);
+
+        
+
+    };
+    thrust::counting_iterator<uint64_t, thrust::device_system_tag> iter(0);
+    thrust::for_each(iter, iter + 512*leafCount, kernel);
+}
