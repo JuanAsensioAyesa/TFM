@@ -14,243 +14,133 @@
 #include <iostream>
 #include <stdlib.h>     /* atoi */
 #include "pruebaThrust.h"
+#include "utilsSkin/utilSkin.hpp"
+#include "utilGrid/Grid.hpp"
 
-template<class GridType>
-void make_layer(GridType& grid, int size,int depth, openvdb::Coord& origin,float value,int increment = 1){
-    using ValueT = typename GridType::ValueType;
-    // Distance value for the constant region exterior to the narrow band
-    const ValueT outside = grid.background();
-    // Distance value for the constant region interior to the narrow band
-    // (by convention, the signed distance is negative in the interior of
-    // a level set)
-    
-    // Use the background value as the width in voxels of the narrow band.
-    // (The narrow band is centered on the surface of the sphere, which
-    // has distance 0.)
-    int padding = int(openvdb::math::RoundUp(openvdb::math::Abs(outside)));
-    // The bounding box of the narrow band is 2*dim voxels on a side.
-    int dim = int(size + padding);
-    dim = size;
-    // Get a voxel accessor.
-    typename GridType::Accessor accessor = grid.getAccessor();
-    
-    int &i = origin[0], &j = origin[1], &k = origin[2];
-    int min_size = origin[0]-size;
-    int min_depth = origin[1] - depth;
-    int min_size_2 = origin[2]-size;
-    int k_0 = origin[2];
-    int i_0 = origin[0];
-    int j_0 = origin[1];
-    
-    for(k=k_0 ;k>min_size_2;k-=increment){
-        for(i=i_0;i > min_size;i-=increment){
-            for(j=j_0 ;j>min_depth;j-=increment){
-                accessor.setValue(origin, value);
-                //std::cout<<origin<<std::endl;
-            }
-            //std::cout<<i<<std::endl;
-        }
-    }
-}
-/**
- * @brief Para pasar los datos a la funcion createSkin 
- * 
- */
-struct dataSkin{
-    float valueCorneum=0.0,valueSpinosum=0.0, valueBasale=0.0, valueDermis=0.0,valueHipoDermis=0.0;
-};
-template<class GridType>
-void createSkin(GridType& grid,int size_lado,int profundidad_total,openvdb::Coord coordenadas,dataSkin data){
-    
-    
-    //Epidermis = 0.2mm
-    //  Stratum corneum
-    //  Stratum spinosum
-    //  Basal membrane
-    //Dermis = 1-4mm
-    //Hypodermis 4-9mm  Se asigna poco
-    int profundidadHipoDermis = 20;
-    profundidad_total = profundidad_total - profundidadHipoDermis;
-    float epidermis =0.3; //Proporcion de Epidermis
-    int profundidadEpidermis = profundidad_total * epidermis;
-    int profundidadBasale = profundidadEpidermis * 0.1;
-    int profundidadSpinosum = profundidadEpidermis * 0.15;
-    int profundidadCorneum = profundidadEpidermis - profundidadBasale - profundidadSpinosum;
-
-    int profundidadDermis = profundidad_total - profundidadEpidermis;
-
-    std::cout<<"Pre "<<coordenadas<<std::endl;
-    make_layer(grid,size_lado,profundidadCorneum,coordenadas,data.valueCorneum);
-    coordenadas[0] = 0;
-    coordenadas[2] = 0 ;
-    make_layer(grid,size_lado,profundidadSpinosum,coordenadas,data.valueSpinosum,1);
-    coordenadas[0] = 0;
-    coordenadas[2] = 0 ;
-    make_layer(grid,size_lado,profundidadBasale,coordenadas,data.valueBasale,1);
-    coordenadas[0] = 0;
-    coordenadas[2] = 0 ;
-    make_layer(grid,size_lado,profundidadDermis,coordenadas,data.valueDermis,1);
-    coordenadas[0] = 0;
-    coordenadas[2] = 0 ;
-    make_layer(grid,size_lado,profundidadHipoDermis,coordenadas,data.valueHipoDermis,1);
-
-    std::cout<<"Post "<<coordenadas<<std::endl;
-    std::cout<<"Profundidad real "<<profundidadHipoDermis + profundidadBasale + profundidadSpinosum + profundidadCorneum+profundidadDermis<<std::endl;
-    //makeSkin(*grid,20,openvdb::Vec3f(1.5, 2, 3));
-    //makeSphere(*grid, /*radius=*/50.0, /*center=*/openvdb::Vec3f(1.5, 2, 3));
-    // Associate some metadata with the grid.
-    //grid.insertMeta("radius", openvdb::FloatMetadata(50.0));
-    // Associate a scaling transform with the grid that sets the voxel size
-    // to 0.5 units in world space.
-    // grid.setTransform(
-    //     openvdb::math::Transform::createLinearTransform(/*voxel size=*/0.01));
-    // Identify the grid as a level set.
-    //grid.setGridClass(openvdb::GRID_STAGGERED );
-    // Name the grid "LevelSetSphere".
-    //grid.setName("LevelSetSphere");
-}
-
-void copyNanoToOpen(const nanovdb::FloatGrid* gridNano,openvdb::FloatGrid& gridOpen,int size_lado,int profundidad_total){
-    openvdb::Coord coordenadas_open;
-    nanovdb::Coord coordenadas_nano;
-
-    auto accessor_nano = gridNano->getAccessor();
-    auto accessor_open = gridOpen.getAccessor();
-
-    for(int i  =0;i>-size_lado;i--){
-        for(int j = 0 ;j>-profundidad_total;j--){
-            for(int k = 0 ;k>-size_lado;k--){
-                coordenadas_nano = nanovdb::Coord(i,j,k);
-                coordenadas_open = openvdb::Coord(i,j,k);
-                
-                accessor_open.setValue(coordenadas_open,accessor_nano.getValue(coordenadas_nano));
-            }
-        }
-    }
-}
 
 int main(int argc,char * argv[]){
+    Grid<float,openvdb::FloatGrid,nanovdb::FloatGrid> gridPrueba(250,140,0.0);
     /**
      * Creamos la piel con los datos pertinentes
      * 
      */
-    openvdb::FloatGrid::Ptr grid_open =
-       openvdb::FloatGrid::create(/*background value=*/2.0);
-    openvdb::FloatGrid::Ptr grid_open_2 =
-       openvdb::FloatGrid::create(/*background value=*/2.0);
+    // openvdb::FloatGrid::Ptr grid_open =
+    //    openvdb::FloatGrid::create(/*background value=*/2.0);
+    // openvdb::FloatGrid::Ptr grid_open_2 =
+    //    openvdb::FloatGrid::create(/*background value=*/2.0);
     dataSkin dataIniEndothelial;
     int size_lado = 250;
     int profundidad_total = 150;
     openvdb::Coord coordenadas;
-    createSkin(*grid_open,size_lado,profundidad_total,coordenadas,dataIniEndothelial);
-    createSkin(*grid_open_2,size_lado,profundidad_total,coordenadas,dataIniEndothelial);
+    createSkin(*gridPrueba.gridOpen_1_ptr,size_lado,profundidad_total,coordenadas,dataIniEndothelial);
+    //createSkin(*grid_open_2,size_lado,profundidad_total,coordenadas,dataIniEndothelial);
     
-    /**
-     * Transformamos a nano
-     * 
-     */
-    auto handle_grid_endothelial = nanovdb::openToNanoVDB<nanovdb::CudaDeviceBuffer>(*grid_open);
-    auto handle_grid_endothelial_2 = nanovdb::openToNanoVDB<nanovdb::CudaDeviceBuffer>(*grid_open_2);
-    /**
-     * Subimos a la gpu y obtenemos los handle
-     * 
-     */
-    using GridT = nanovdb::FloatGrid;
-    handle_grid_endothelial .deviceUpload(0,true); // Copy the NanoVDB grid to the GPU synchronously
-    handle_grid_endothelial_2.deviceUpload(0,true); // Copy the NanoVDB grid to the GPU synchronously
-    const GridT* nano_grid_cpu = handle_grid_endothelial.grid<float>(); // get a (raw) const pointer to a NanoVDB grid of value type float on the CPU
-    GridT* nano_grid_device = handle_grid_endothelial.deviceGrid<float>(); // get a (raw) pointer to a NanoVDB grid of value type float on the GPU
-    const GridT* nano_grid_cpu_2 = handle_grid_endothelial.grid<float>(); // get a (raw) const pointer to a NanoVDB grid of value type float on the CPU
-    GridT* nano_grid_device_2 = handle_grid_endothelial.deviceGrid<float>(); // get a (raw) pointer to a NanoVDB grid of value type float on the GPU
-    /**
-     * Lanzamos kernel y obtenemos datos
-     * 
-     */
+    // /**
+    //  * Transformamos a nano
+    //  * 
+    //  */
+    // auto handle_grid_endothelial = nanovdb::openToNanoVDB<nanovdb::CudaDeviceBuffer>(*grid_open);
+    // auto handle_grid_endothelial_2 = nanovdb::openToNanoVDB<nanovdb::CudaDeviceBuffer>(*grid_open_2);
+    // /**
+    //  * Subimos a la gpu y obtenemos los handle
+    //  * "
+    //  */
+    // using GridT = nanovdb::FloatGrid;
+    // handle_grid_endothelial.deviceUpload(0,true); // Copy the NanoVDB grid to the GPU synchronously
+    // handle_grid_endothelial_2.deviceUpload(0,true); // Copy the NanoVDB grid to the GPU synchronously
+    // const GridT* nano_grid_cpu = handle_grid_endothelial.grid<float>(); // get a (raw) const pointer to a NanoVDB grid of value type float on the CPU
+    // GridT* nano_grid_device = handle_grid_endothelial.deviceGrid<float>(); // get a (raw) pointer to a NanoVDB grid of value type float on the GPU
+    // const GridT* nano_grid_cpu_2 = handle_grid_endothelial.grid<float>(); // get a (raw) const pointer to a NanoVDB grid of value type float on the CPU
+    // GridT* nano_grid_device_2 = handle_grid_endothelial.deviceGrid<float>(); // get a (raw) pointer to a NanoVDB grid of value type float on the GPU
+    // /**
+    //  * Lanzamos kernel y obtenemos datos
+    //  * 
+    //  */
     
-    int lim_inf = -profundidad_total+1;
-    int lim_sup = 0 ;
-    int modulo = 3;//La mitad de leafs seran endothelial
-    generateEndothelial(nano_grid_device,nano_grid_cpu->tree().nodeCount(0),lim_sup,lim_inf,modulo);
+    // int lim_inf = -profundidad_total+1;
+    // int lim_sup = 0 ;
+    // int modulo = 3;//La mitad de leafs seran endothelial
+    // generateEndothelial(nano_grid_device,nano_grid_cpu->tree().nodeCount(0),lim_sup,lim_inf,modulo);
     
     
-    handle_grid_endothelial.deviceDownload(0,true);
+    // handle_grid_endothelial.deviceDownload(0,true);
 
-    /**
-     * Generamos los grid necesarios para calcular el TAF iterativamente
-     * 
-     */
-    openvdb::FloatGrid::Ptr grid_open_TAF_1 =
-       openvdb::FloatGrid::create(/*background value=*/2.0);
-    openvdb::FloatGrid::Ptr grid_open_TAF_2 =
-       openvdb::FloatGrid::create(/*background value=*/2.0);
+    // /**
+    //  * Generamos los grid necesarios para calcular el TAF iterativamente
+    //  * 
+    //  */
+    // openvdb::FloatGrid::Ptr grid_open_TAF_1 =
+    //    openvdb::FloatGrid::create(/*background value=*/2.0);
+    // openvdb::FloatGrid::Ptr grid_open_TAF_2 =
+    //    openvdb::FloatGrid::create(/*background value=*/2.0);
     
-    dataIniEndothelial.valueBasale = 1.0;
-    dataIniEndothelial.valueCorneum = 2.0;
-    dataIniEndothelial.valueDermis = 3.0;
-    dataIniEndothelial.valueHipoDermis = 4.0;
-    dataIniEndothelial.valueSpinosum = 5.0;
-    createSkin(*grid_open_TAF_1,size_lado,profundidad_total,coordenadas,dataIniEndothelial);
-    createSkin(*grid_open_TAF_2,size_lado,profundidad_total,coordenadas,dataIniEndothelial);
+    // dataIniEndothelial.valueBasale = 1.0;
+    // dataIniEndothelial.valueCorneum = 2.0;
+    // dataIniEndothelial.valueDermis = 3.0;
+    // dataIniEndothelial.valueHipoDermis = 4.0;
+    // dataIniEndothelial.valueSpinosum = 5.0;
+    // //createSkin(*grid_open_TAF_1,size_lado,profundidad_total,coordenadas,dataIniEndothelial);
+    // //createSkin(*grid_open_TAF_2,size_lado,profundidad_total,coordenadas,dataIniEndothelial);
 
-    auto handle_grid_TAF_1 = nanovdb::openToNanoVDB<nanovdb::CudaDeviceBuffer>(*grid_open_TAF_1);
-    auto handle_grid_TAF_2 = nanovdb::openToNanoVDB<nanovdb::CudaDeviceBuffer>(*grid_open_TAF_2);
-    handle_grid_TAF_1.deviceUpload(0,true);
-    handle_grid_TAF_2.deviceUpload(0,true);
-    handle_grid_endothelial.deviceUpload(0,true);
+    // auto handle_grid_TAF_1 = nanovdb::openToNanoVDB<nanovdb::CudaDeviceBuffer>(*grid_open_TAF_1);
+    // auto handle_grid_TAF_2 = nanovdb::openToNanoVDB<nanovdb::CudaDeviceBuffer>(*grid_open_TAF_2);
+    // handle_grid_TAF_1.deviceUpload(0,true);
+    // handle_grid_TAF_2.deviceUpload(0,true);
+    // handle_grid_endothelial.deviceUpload(0,true);
     
-    GridT* grid_cpu_TAF_1 = handle_grid_TAF_1.grid<float>(); // get a (raw) const pointer to a NanoVDB grid of value type float on the CPU
-    GridT* grid_device_TAF_1 = handle_grid_TAF_1.deviceGrid<float>(); // get a (raw) pointer to a NanoVDB grid of value type float on the GPU
+    // GridT* grid_cpu_TAF_1 = handle_grid_TAF_1.grid<float>(); // get a (raw) const pointer to a NanoVDB grid of value type float on the CPU
+    // GridT* grid_device_TAF_1 = handle_grid_TAF_1.deviceGrid<float>(); // get a (raw) pointer to a NanoVDB grid of value type float on the GPU
 
-    GridT* grid_cpu_TAF_2 = handle_grid_TAF_2.grid<float>(); // get a (raw) const pointer to a NanoVDB grid of value type float on the CPU
-    GridT* grid_device_TAF_2 = handle_grid_TAF_2.deviceGrid<float>(); // get a (raw) pointer to a NanoVDB grid of value type float on the GPU
+    // GridT* grid_cpu_TAF_2 = handle_grid_TAF_2.grid<float>(); // get a (raw) const pointer to a NanoVDB grid of value type float on the CPU
+    // GridT* grid_device_TAF_2 = handle_grid_TAF_2.deviceGrid<float>(); // get a (raw) pointer to a NanoVDB grid of value type float on the GPU
 
-    GridT* readGridTAF = grid_device_TAF_1;
-    GridT* writeGridTAF = grid_device_TAF_2;
-    int veces = 11;
-    if(argc > 1){
-        veces = atoi(argv[1]);
-    }
-    for(int i = 0 ;i<veces;i++){
-        std::cout<<i<<std::endl;
-        if(i%2 == 0 ){
-            readGridTAF = grid_device_TAF_1;
-            writeGridTAF = grid_device_TAF_2;
-        }else{
-            readGridTAF = grid_device_TAF_2;
-            writeGridTAF = grid_device_TAF_1;
-        }
-        equationTAF(nano_grid_device,readGridTAF,writeGridTAF,grid_cpu_TAF_1->tree().nodeCount(0));
-    }
-    handle_grid_TAF_1.deviceDownload(0,true);
-    handle_grid_TAF_2.deviceDownload(0,true);
-    handle_grid_endothelial.deviceDownload(0,true);
-    
-
-    /**
-     * Volvemos a copiar a open
-     * 
-     */
-    std::cout<<"Pre copy"<<std::endl;
-    copyNanoToOpen(grid_cpu_TAF_2,*grid_open_TAF_1,size_lado,profundidad_total);
-    copyNanoToOpen(nano_grid_cpu,*grid_open,size_lado,profundidad_total);
-    std::cout<<"Post copy"<<std::endl;
-
+    // GridT* readGridTAF = grid_device_TAF_1;
+    // GridT* writeGridTAF = grid_device_TAF_2;
+    // int veces = 11;
+    // if(argc > 1){
+    //     veces = atoi(argv[1]);
+    // }
+    // for(int i = 0 ;i<veces;i++){
+    //     std::cout<<i<<std::endl;
+    //     if(i%2 == 0 ){
+    //         readGridTAF = grid_device_TAF_1;
+    //         writeGridTAF = grid_device_TAF_2;
+    //     }else{
+    //         readGridTAF = grid_device_TAF_2;
+    //         writeGridTAF = grid_device_TAF_1;
+    //     }
+    //     equationTAF(nano_grid_device,readGridTAF,writeGridTAF,grid_cpu_TAF_1->tree().nodeCount(0));
+    // }
+    // handle_grid_TAF_1.deviceDownload(0,true);
+    // handle_grid_TAF_2.deviceDownload(0,true);
+    // handle_grid_endothelial.deviceDownload(0,true);
     
 
+    // /**
+    //  * Volvemos a copiar a open
+    //  * 
+    //  */
+    // std::cout<<"Pre copy"<<std::endl;
+    // copyNanoToOpen(grid_cpu_TAF_2,*grid_open_TAF_1,size_lado,profundidad_total);
+    // copyNanoToOpen(nano_grid_cpu,*grid_open,size_lado,profundidad_total);
+    // std::cout<<"Post copy"<<std::endl;
+
+    
 
 
 
 
-    /**
-     * Escribimos a fichero
-     * 
-     */
+
+    // /**
+    //  * Escribimos a fichero
+    //  * 
+    //  */
     openvdb::io::File file("mygrids.vdb");
         // Add the grid pointer to a container.
         openvdb::GridPtrVec grids;
         //grids.push_back(grid);
-        grids.push_back(grid_open);
-        grids.push_back(grid_open_TAF_1);
+        grids.push_back((gridPrueba.gridOpen_1_ptr));
+        //grids.push_back(grid_open_TAF_1);
         // Write out the contents of the container.
         file.write(grids);
         file.close();
