@@ -16,7 +16,7 @@
 #include <memory>
 #include <string>
 
-template<typename OpenGridType,class GridTypeOpen,class GridTypeNano>
+template<typename OpenGridType,typename NanoGridType,class GridTypeOpen,class GridTypeNano>
 class Grid{
     private:
         GridTypeOpen gridOpen_1;
@@ -54,11 +54,11 @@ class Grid{
             handleNano_1 = nanovdb::openToNanoVDB<nanovdb::CudaDeviceBuffer>(gridOpen_1);
             handleNano_2 = nanovdb::openToNanoVDB<nanovdb::CudaDeviceBuffer>(gridOpen_2);
 
-            gridNano_1_cpu = handleNano_1.grid<OpenGridType>();
-            gridNano_2_cpu = handleNano_2.grid<OpenGridType>();
+            gridNano_1_cpu = handleNano_1.grid<NanoGridType>();
+            gridNano_2_cpu = handleNano_2.grid<NanoGridType>();
 
-            gridNano_1_device = handleNano_1.deviceGrid<OpenGridType>();
-            gridNano_2_device = handleNano_2.deviceGrid<OpenGridType>();
+            gridNano_1_device = handleNano_1.deviceGrid<NanoGridType>();
+            gridNano_2_device = handleNano_2.deviceGrid<NanoGridType>();
             uploaded = false;
 
         }

@@ -16,10 +16,13 @@
 #include "pruebaThrust.h"
 #include "utilsSkin/utilSkin.hpp"
 #include "utilGrid/Grid.hpp"
+#include <vector>
 
 
 int main(int argc,char * argv[]){
-    Grid<float,openvdb::FloatGrid,nanovdb::FloatGrid> gridPrueba(250,140,0.0);
+    Grid<float,float,openvdb::FloatGrid,nanovdb::FloatGrid> gridPrueba(250,140,0.0);
+    openvdb::Vec3s ini;
+    Grid<openvdb::Vec3s,nanovdb::Vec3f,openvdb::Vec3SGrid,nanovdb::Vec3fGrid> gridVectorPrueba(250,140,ini);
     /**
      * Creamos la piel con los datos pertinentes
      * 
