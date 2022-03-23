@@ -71,6 +71,13 @@ class Grid{
             return gridOpen_write_ptr;
         }
         
+        typename GridTypeOpen::Accessor getAccessorOpenRead(){
+            return gridOpen_read.getAccessor();
+        }
+
+        typename GridTypeOpen::Accessor getAccessorOpenWrite(){
+            return gridOpen_write.getAccessor();
+        }
         
         GridTypeNano* getPtrNanoRead(typePointer type){
             switch(type){
@@ -120,7 +127,7 @@ class Grid{
         void writeToFile(std::string filename){
             openvdb::io::File file(filename);
             openvdb::GridPtrVec grids;
-            grids.push_back(gridOpen_read_ptr);
+            grids.push_back(gridOpen_write_ptr);
             
             file.write(grids);
             file.close();

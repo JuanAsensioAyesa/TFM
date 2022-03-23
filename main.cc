@@ -42,9 +42,10 @@ int main(int argc,char * argv[]){
     int size_lado = 250;
     int profundidad_total = 150;
     openvdb::Coord coordenadas;
-    //createSkin(*gridPrueba.getPtrOpenRead(),size_lado,profundidad_total,coordenadas,dataIniEndothelial);
-    //createSkin(*gridPrueba.getPtrOpenWrite(),size_lado,profundidad_total,coordenadas,dataIniEndothelial);
-    gridPrueba.fillRandom();
+    createSkin(*gridPrueba.getPtrOpenRead(),size_lado,profundidad_total,coordenadas,dataIniEndothelial);
+    createSkin(*gridPrueba.getPtrOpenWrite(),size_lado,profundidad_total,coordenadas,dataIniEndothelial);
+    auto accessor = gridPrueba.getAccessorOpenRead();
+    //gridPrueba.fillRandom();
     gridVectorPrueba.fillRandom();
     gridPrueba.upload();
     gridVectorPrueba.upload();
@@ -54,12 +55,12 @@ int main(int argc,char * argv[]){
     std::cout<<gridVectorPrueba.getPtrNanoRead(typePointer::CPU)->tree().nodeCount(0)<<std::endl;
     std::cout<<gridVectorPrueba.getPtrNanoWrite(typePointer::CPU)->tree().nodeCount(0)<<std::endl;
 
-    //pruebaGradiente(gridVectorPrueba.getPtrNanoWrite(typePointer::DEVICE),gridPrueba.getPtrNanoRead(typePointer::DEVICE),gridPrueba.getPtrNanoRead(typePointer::CPU)->tree().nodeCount(0));
+    pruebaGradiente(gridVectorPrueba.getPtrNanoWrite(typePointer::DEVICE),gridPrueba.getPtrNanoRead(typePointer::DEVICE),gridPrueba.getPtrNanoRead(typePointer::CPU)->tree().nodeCount(0));
 
     gridVectorPrueba.download();
     gridPrueba.download();
 
-    //gridVectorPrueba.copyNanoToOpen();
+    gridVectorPrueba.copyNanoToOpen();
     //gridVectorPrueba.fillRandom();
     gridVectorPrueba.writeToFile("myGrids.vdb");
     

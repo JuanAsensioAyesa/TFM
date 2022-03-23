@@ -95,17 +95,17 @@ void equationTAF(nanovdb::FloatGrid* input_grid_endothelial,nanovdb::FloatGrid* 
 void pruebaGradiente(nanovdb::Vec3fGrid  *grid_d,nanovdb::FloatGrid* gridSource ,uint64_t leafCount)
 {
     auto kernel = [grid_d,gridSource] __device__ (const uint64_t n) {
-        auto *leaf_d = gridSource->tree().getFirstNode<0>() + (n >> 9);// this only works if grid->isSequential<0>() == true
+        auto *leaf_d = grid_d->tree().getFirstNode<0>() + (n >> 9);// this only works if grid->isSequential<0>() == true
         const int i = n & 511;
         
         auto coord = leaf_d->offsetToGlobalCoord(i);
-        //const nanovdb::Coord coord_nano = coord;
-        printf("%d %d %d\n",coord[0],coord[1],coord[2]);
-        //nanovdb::CurvatureStencil<nanovdb::FloatGrid> stencilNano(*gridSource);
+        const nanovdb::Coord coord_nano = coord;
+        //printf("%d %d %d\n",coord[0],coord[1],coord[2]);
+        nanovdb::CurvatureStencil<nanovdb::FloatGrid> stencilNano(*gridSource);
 
         
-        //stencilNano.moveTo(coord_nano);
-        //leaf_d->setValueOnly(coord,stencilNano.gradient());
+        stencilNano.moveTo(coord_nano);
+        leaf_d->setValueOnly(coord,stencilNano.gradient());
         
         
     };
