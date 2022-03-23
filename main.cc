@@ -24,8 +24,7 @@ int main(int argc,char * argv[]){
     Grid<> gridPrueba(250,140,0.0);
     openvdb::Vec3s ini = {0.0,0.0,0.0};
     Grid<openvdb::Vec3s,nanovdb::Vec3f,openvdb::Vec3SGrid,nanovdb::Vec3fGrid> gridVectorPrueba(250,140,ini);
-    gridPrueba.upload();
-    gridVectorPrueba.upload();
+    
     /**
      * Creamos la piel con los datos pertinentes
      * 
@@ -43,12 +42,19 @@ int main(int argc,char * argv[]){
     int size_lado = 250;
     int profundidad_total = 150;
     openvdb::Coord coordenadas;
-    createSkin(*gridPrueba.getPtrOpenRead(),size_lado,profundidad_total,coordenadas,dataIniEndothelial);
-    
+    //createSkin(*gridPrueba.getPtrOpenRead(),size_lado,profundidad_total,coordenadas,dataIniEndothelial);
+    //createSkin(*gridPrueba.getPtrOpenWrite(),size_lado,profundidad_total,coordenadas,dataIniEndothelial);
+    gridPrueba.fillRandom();
+    gridVectorPrueba.fillRandom();
+    gridPrueba.upload();
+    gridVectorPrueba.upload();
 
-    
+    std::cout<<gridPrueba.getPtrNanoRead(typePointer::CPU)->tree().nodeCount(0)<<std::endl;
+    std::cout<<gridPrueba.getPtrNanoWrite(typePointer::CPU)->tree().nodeCount(0)<<std::endl;
+    std::cout<<gridVectorPrueba.getPtrNanoRead(typePointer::CPU)->tree().nodeCount(0)<<std::endl;
+    std::cout<<gridVectorPrueba.getPtrNanoWrite(typePointer::CPU)->tree().nodeCount(0)<<std::endl;
 
-    pruebaGradiente(gridVectorPrueba.getPtrNanoWrite(typePointer::DEVICE),gridPrueba.getPtrNanoRead(typePointer::DEVICE),gridPrueba.getPtrNanoRead(typePointer::CPU)->tree().nodeCount(0));
+    //pruebaGradiente(gridVectorPrueba.getPtrNanoWrite(typePointer::DEVICE),gridPrueba.getPtrNanoRead(typePointer::DEVICE),gridPrueba.getPtrNanoRead(typePointer::CPU)->tree().nodeCount(0));
 
     gridVectorPrueba.download();
     gridPrueba.download();
