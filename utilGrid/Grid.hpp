@@ -15,6 +15,9 @@
 #include <cuda_device_runtime_api.h>
 #include <memory>
 #include <string>
+#include <type_traits>
+
+enum typePointer{CPU,DEVICE};
 
 template<typename OpenGridType=float,typename NanoGridType=float,class GridTypeOpen=openvdb::FloatGrid,class GridTypeNano=nanovdb::FloatGrid>
 class Grid{
@@ -71,7 +74,7 @@ class Grid{
             return gridOpen_2_ptr;
         }
         
-        enum typePointer{CPU,DEVICE};
+        
         GridTypeNano* getPtrNano1(typePointer type){
             switch(type){
                 case CPU:
@@ -130,8 +133,17 @@ class Grid{
                     for(int k = 0 ;k>-size_lado;k--){
                         coordenadas_nano = nanovdb::Coord(i,j,k);
                         coordenadas_open = openvdb::Coord(i,j,k);
+                        if constexpr(std::is_same<OpenGridType,float>::value){
+                            accessor_open_2.setValue(coordenadas_open,accessor_nano_2.getValue(coordenadas_nano));
+                        }else if constexpr(std::is_same<OpenGridType,openvdb::Vec3s>::value) {
+                            nanovdb::Vec3f vec = accessor_nano_2.getValue(coordenadas_nano);
+                            openvdb::Vec3s vec_open = accessor_open_2.getValue(coordenadas_open);
+                            for(int c =0 ;c<3;c++){
+                                vec_open[c] = vec[c];
+                            }
+                            accessor_open_2.setValue(coordenadas_open,vec_open);
+                        }
                         
-                        accessor_open_2.setValue(coordenadas_open,accessor_nano_2.getValue(coordenadas_nano));
                     }
                 }
             }

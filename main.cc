@@ -33,21 +33,28 @@ int main(int argc,char * argv[]){
     // openvdb::FloatGrid::Ptr grid_open_2 =
     //    openvdb::FloatGrid::create(/*background value=*/2.0);
     dataSkin dataIniEndothelial;
+    dataIniEndothelial.valueBasale = 1.0;
+    dataIniEndothelial.valueCorneum = 2.0;
+    dataIniEndothelial.valueDermis = 3.0;
+    dataIniEndothelial.valueHipoDermis = 4.0;
+    dataIniEndothelial.valueSpinosum = 5.0;
     int size_lado = 250;
     int profundidad_total = 150;
     openvdb::Coord coordenadas;
     createSkin(*gridPrueba.getPtrOpen1(),size_lado,profundidad_total,coordenadas,dataIniEndothelial);
-    
-    openvdb::math::GradStencil<openvdb::FloatGrid> stencil(*gridPrueba.getPtrOpen1());
-    openvdb::Coord coord;
-    stencil.moveTo(coord);
-    std::cout<<stencil.gradient()<<std::endl;
-    Grid<>::typePointer type = Grid<>::typePointer::CPU;
-    nanovdb::CurvatureStencil<nanovdb::FloatGrid> stencilNano(*gridPrueba.getPtrNano1(type));
-    nanovdb::Coord coordNano;
-    stencilNano.moveTo(coordNano);
-    std::cout<<stencilNano.gradient()[0]<<std::endl;
+    gridPrueba.upload();
+    gridVectorPrueba.upload();
 
+    nanovdb::CurvatureStencil<nanovdb::FloatGrid> stencil(*gridPrueba.getPtrNano1(typePointer::CPU));
+
+    pruebaGradiente(gridVectorPrueba.getPtrNano2(typePointer::DEVICE),&stencil,gridPrueba.getPtrNano1(typePointer::CPU)->tree().nodeCount(0));
+
+    gridVectorPrueba.download();
+    gridPrueba.download();
+
+    gridVectorPrueba.copyNanoToOpen();
+    gridVectorPrueba.writeToFile("myGrids.vdb");
+    
     //createSkin(*grid_open_2,size_lado,profundidad_total,coordenadas,dataIniEndothelial);
     
     // /**
@@ -89,11 +96,7 @@ int main(int argc,char * argv[]){
     // openvdb::FloatGrid::Ptr grid_open_TAF_2 =
     //    openvdb::FloatGrid::create(/*background value=*/2.0);
     
-    // dataIniEndothelial.valueBasale = 1.0;
-    // dataIniEndothelial.valueCorneum = 2.0;
-    // dataIniEndothelial.valueDermis = 3.0;
-    // dataIniEndothelial.valueHipoDermis = 4.0;
-    // dataIniEndothelial.valueSpinosum = 5.0;
+    
     // //createSkin(*grid_open_TAF_1,size_lado,profundidad_total,coordenadas,dataIniEndothelial);
     // //createSkin(*grid_open_TAF_2,size_lado,profundidad_total,coordenadas,dataIniEndothelial);
 
@@ -146,19 +149,7 @@ int main(int argc,char * argv[]){
 
 
 
-    // /**
-    //  * Escribimos a fichero
-    //  * 
-    //  */
-    openvdb::io::File file("mygrids.vdb");
-        // Add the grid pointer to a container.
-        openvdb::GridPtrVec grids;
-        //grids.push_back(grid);
-        grids.push_back((gridPrueba.getPtrOpen1()));
-        //grids.push_back(grid_open_TAF_1);
-        // Write out the contents of the container.
-        file.write(grids);
-        file.close();
+    
     
     return 0;
 

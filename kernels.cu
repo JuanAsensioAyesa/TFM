@@ -9,7 +9,7 @@
 #include <nanovdb/util/Primitives.h>
 #include <nanovdb/util/CudaDeviceBuffer.h>
 #include "pruebaThrust.h"
-
+#include <nanovdb/util/Stencils.h>
 /**
  * @brief Genera la estrucura inicial de las celulas endoteliales, cada cilindro tendra el tamanio de un leaf node (8x8x8)
  * 
@@ -88,6 +88,27 @@ void equationTAF(nanovdb::FloatGrid* input_grid_endothelial,nanovdb::FloatGrid* 
         
 
     };
+    thrust::counting_iterator<uint64_t, thrust::device_system_tag> iter(0);
+    thrust::for_each(iter, iter + 512*leafCount, kernel);
+}
+
+void pruebaGradiente(nanovdb::Vec3fGrid  *grid_d,nanovdb::CurvatureStencil<nanovdb::FloatGrid>* stencilNano ,uint64_t leafCount)
+{
+    auto kernel = [grid_d,stencilNano] __device__ (const uint64_t n) {
+        auto *leaf_d = grid_d->tree().getFirstNode<0>() + (n >> 9);// this only works if grid->isSequential<0>() == true
+        const int i = n & 511;
+        
+        auto coord = leaf_d->offsetToGlobalCoord(i);
+        const nanovdb::Coord coord_nano = coord;
+        
+        //printf("%d %d %d\n",coord[0],coord[1],coord[2]);
+        
+        stencilNano->moveTo(coord_nano);
+        leaf_d->setValueOnly(coord,stencilNano->gradient());
+        
+        
+    };
+
     thrust::counting_iterator<uint64_t, thrust::device_system_tag> iter(0);
     thrust::for_each(iter, iter + 512*leafCount, kernel);
 }
