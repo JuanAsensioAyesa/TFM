@@ -16,7 +16,7 @@
 #include <memory>
 #include <string>
 
-template<typename OpenGridType,typename NanoGridType,class GridTypeOpen,class GridTypeNano>
+template<typename OpenGridType=float,typename NanoGridType=float,class GridTypeOpen=openvdb::FloatGrid,class GridTypeNano=nanovdb::FloatGrid>
 class Grid{
     private:
         GridTypeOpen gridOpen_1;

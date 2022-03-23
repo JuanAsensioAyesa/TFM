@@ -17,10 +17,11 @@
 #include "utilsSkin/utilSkin.hpp"
 #include "utilGrid/Grid.hpp"
 #include <vector>
-
+#include <openvdb/math/Stencils.h>
+#include <nanovdb/util/Stencils.h>
 
 int main(int argc,char * argv[]){
-    Grid<float,float,openvdb::FloatGrid,nanovdb::FloatGrid> gridPrueba(250,140,0.0);
+    Grid<> gridPrueba(250,140,0.0);
     openvdb::Vec3s ini;
     Grid<openvdb::Vec3s,nanovdb::Vec3f,openvdb::Vec3SGrid,nanovdb::Vec3fGrid> gridVectorPrueba(250,140,ini);
     /**
@@ -36,6 +37,17 @@ int main(int argc,char * argv[]){
     int profundidad_total = 150;
     openvdb::Coord coordenadas;
     createSkin(*gridPrueba.getPtrOpen1(),size_lado,profundidad_total,coordenadas,dataIniEndothelial);
+    
+    openvdb::math::GradStencil<openvdb::FloatGrid> stencil(*gridPrueba.getPtrOpen1());
+    openvdb::Coord coord;
+    stencil.moveTo(coord);
+    std::cout<<stencil.gradient()<<std::endl;
+    Grid<>::typePointer type = Grid<>::typePointer::CPU;
+    nanovdb::CurvatureStencil<nanovdb::FloatGrid> stencilNano(*gridPrueba.getPtrNano1(type));
+    nanovdb::Coord coordNano;
+    stencilNano.moveTo(coordNano);
+    std::cout<<stencilNano.gradient()[0]<<std::endl;
+
     //createSkin(*grid_open_2,size_lado,profundidad_total,coordenadas,dataIniEndothelial);
     
     // /**
