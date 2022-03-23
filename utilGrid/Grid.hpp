@@ -179,8 +179,8 @@ class Grid{
                             //accessor_open.setValue(coordenadas_open,dist(e2));
                             //accessor_open_write.setValue(coordenadas_open,dist(e2));
 
-                            accessor_open.setValue(coordenadas_open,i*j*k);
-                            accessor_open_write.setValue(coordenadas_open,i*j*k);
+                            accessor_open.setValue(coordenadas_open,i*i);
+                            accessor_open_write.setValue(coordenadas_open,i*i);
                         }else if constexpr(std::is_same<OpenGridType,openvdb::Vec3s>::value){
                             openvdb::Vec3s vec;
                             vec[0] = dist(e2);
