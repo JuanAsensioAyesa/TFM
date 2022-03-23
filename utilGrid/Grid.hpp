@@ -94,8 +94,8 @@ class Grid{
 
         void upload(){
             if(!uploaded){
-                handleNano_1.deviceUpload(false);
-                handleNano_2.deviceUpload(false);
+                handleNano_1.deviceUpload(0,false);
+                handleNano_2.deviceUpload(0,false);
                 uploaded = true;
 
             }
@@ -103,15 +103,15 @@ class Grid{
 
         void download(){
             if(uploaded){
-                handleNano_1.deviceDownload(true);
-                handleNano_2.deviceDownload(true);
+                handleNano_1.deviceDownload(0,true);
+                handleNano_2.deviceDownload(0,true);
                 uploaded = false;
             }
         }
 
-        void writeToFile(string file){
-            openvdb::io::File file(file);
-            openvdb::GridPtrVec grid;
+        void writeToFile(std::string filename){
+            openvdb::io::File file(filename);
+            openvdb::GridPtrVec grids;
             grids.push_back(gridOpen_1_ptr);
             
             file.write(grids);
