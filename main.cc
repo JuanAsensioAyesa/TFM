@@ -32,7 +32,7 @@ int main(int argc,char * argv[]){
     int size_lado = 250;
     int profundidad_total = 150;
     openvdb::Coord coordenadas;
-    createSkin(*gridPrueba.gridOpen_1_ptr,size_lado,profundidad_total,coordenadas,dataIniEndothelial);
+    createSkin(*gridPrueba.getPtrOpen1(),size_lado,profundidad_total,coordenadas,dataIniEndothelial);
     //createSkin(*grid_open_2,size_lado,profundidad_total,coordenadas,dataIniEndothelial);
     
     // /**
@@ -139,7 +139,7 @@ int main(int argc,char * argv[]){
         // Add the grid pointer to a container.
         openvdb::GridPtrVec grids;
         //grids.push_back(grid);
-        grids.push_back((gridPrueba.gridOpen_1_ptr));
+        grids.push_back((gridPrueba.getPtrOpen1()));
         //grids.push_back(grid_open_TAF_1);
         // Write out the contents of the container.
         file.write(grids);
