@@ -22,8 +22,10 @@
 
 int main(int argc,char * argv[]){
     Grid<> gridPrueba(250,140,0.0);
-    openvdb::Vec3s ini;
+    openvdb::Vec3s ini = {0.0,0.0,0.0};
     Grid<openvdb::Vec3s,nanovdb::Vec3f,openvdb::Vec3SGrid,nanovdb::Vec3fGrid> gridVectorPrueba(250,140,ini);
+    gridPrueba.upload();
+    gridVectorPrueba.upload();
     /**
      * Creamos la piel con los datos pertinentes
      * 
@@ -41,18 +43,18 @@ int main(int argc,char * argv[]){
     int size_lado = 250;
     int profundidad_total = 150;
     openvdb::Coord coordenadas;
-    createSkin(*gridPrueba.getPtrOpen1(),size_lado,profundidad_total,coordenadas,dataIniEndothelial);
-    gridPrueba.upload();
-    gridVectorPrueba.upload();
+    createSkin(*gridPrueba.getPtrOpenRead(),size_lado,profundidad_total,coordenadas,dataIniEndothelial);
+    
 
-    nanovdb::CurvatureStencil<nanovdb::FloatGrid> stencil(*gridPrueba.getPtrNano1(typePointer::CPU));
+    
 
-    pruebaGradiente(gridVectorPrueba.getPtrNano2(typePointer::DEVICE),&stencil,gridPrueba.getPtrNano1(typePointer::CPU)->tree().nodeCount(0));
+    pruebaGradiente(gridVectorPrueba.getPtrNanoWrite(typePointer::DEVICE),gridPrueba.getPtrNanoRead(typePointer::DEVICE),gridPrueba.getPtrNanoRead(typePointer::CPU)->tree().nodeCount(0));
 
     gridVectorPrueba.download();
     gridPrueba.download();
 
-    gridVectorPrueba.copyNanoToOpen();
+    //gridVectorPrueba.copyNanoToOpen();
+    //gridVectorPrueba.fillRandom();
     gridVectorPrueba.writeToFile("myGrids.vdb");
     
     //createSkin(*grid_open_2,size_lado,profundidad_total,coordenadas,dataIniEndothelial);

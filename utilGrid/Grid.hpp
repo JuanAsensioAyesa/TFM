@@ -16,28 +16,29 @@
 #include <memory>
 #include <string>
 #include <type_traits>
+#include <random>
 
 enum typePointer{CPU,DEVICE};
 
 template<typename OpenGridType=float,typename NanoGridType=float,class GridTypeOpen=openvdb::FloatGrid,class GridTypeNano=nanovdb::FloatGrid>
 class Grid{
     private:
-        GridTypeOpen gridOpen_1;
-        GridTypeOpen gridOpen_2;
+        GridTypeOpen gridOpen_read;
+        GridTypeOpen gridOpen_write;
         
-        std::shared_ptr<GridTypeOpen> gridOpen_1_ptr;
-        std::shared_ptr<GridTypeOpen>  gridOpen_2_ptr;
+        std::shared_ptr<GridTypeOpen> gridOpen_read_ptr;
+        std::shared_ptr<GridTypeOpen>  gridOpen_write_ptr;
 
-        nanovdb::GridHandle<nanovdb::CudaDeviceBuffer> handleNano_1;
-        nanovdb::GridHandle<nanovdb::CudaDeviceBuffer> handleNano_2;
+        nanovdb::GridHandle<nanovdb::CudaDeviceBuffer> handleNano_read;
+        nanovdb::GridHandle<nanovdb::CudaDeviceBuffer> handleNano_write;
 
         
         
         
-        GridTypeNano* gridNano_1_cpu;
-        GridTypeNano* gridNano_2_cpu;
-        GridTypeNano* gridNano_1_device;
-        GridTypeNano* gridNano_2_device;
+        GridTypeNano* gridNano_read_cpu;
+        GridTypeNano* gridNano_write_cpu;
+        GridTypeNano* gridNano_read_device;
+        GridTypeNano* gridNano_write_device;
 
 
         int profundidad_total;
@@ -50,64 +51,65 @@ class Grid{
             this->profundidad_total = profundidad_total;
             this->size_lado = size_lado;
 
-            gridOpen_1_ptr = gridOpen_1.create(value);
+            gridOpen_read_ptr = gridOpen_read.create(value);
+            gridOpen_write_ptr = gridOpen_write.create(value);
             
+
+            handleNano_read = nanovdb::openToNanoVDB<nanovdb::CudaDeviceBuffer>(gridOpen_read);
+            handleNano_write = nanovdb::openToNanoVDB<nanovdb::CudaDeviceBuffer>(gridOpen_write);
+
             
-
-            handleNano_1 = nanovdb::openToNanoVDB<nanovdb::CudaDeviceBuffer>(gridOpen_1);
-            handleNano_2 = nanovdb::openToNanoVDB<nanovdb::CudaDeviceBuffer>(gridOpen_2);
-
-            gridNano_1_cpu = handleNano_1.grid<NanoGridType>();
-            gridNano_2_cpu = handleNano_2.grid<NanoGridType>();
-
-            gridNano_1_device = handleNano_1.deviceGrid<NanoGridType>();
-            gridNano_2_device = handleNano_2.deviceGrid<NanoGridType>();
             uploaded = false;
 
         }
 
-        std::shared_ptr<GridTypeOpen> getPtrOpen1(){
-            return gridOpen_1_ptr;
+        std::shared_ptr<GridTypeOpen> getPtrOpenRead(){
+            return gridOpen_read_ptr;
         };
 
-        std::shared_ptr<GridTypeOpen> getPtrOpen2(){
-            return gridOpen_2_ptr;
+        std::shared_ptr<GridTypeOpen> getPtrOpenWrite(){
+            return gridOpen_write_ptr;
         }
         
         
-        GridTypeNano* getPtrNano1(typePointer type){
+        GridTypeNano* getPtrNanoRead(typePointer type){
             switch(type){
                 case CPU:
-                    return gridNano_1_cpu;
+                    return gridNano_read_cpu;
                 case DEVICE:
-                    return gridNano_1_device;
+                    return gridNano_read_device;
             };
             
         }
 
-        GridTypeNano* getPtrNano2(typePointer type){
+        GridTypeNano* getPtrNanoWrite(typePointer type){
             switch(type){
                 case CPU:
-                    return gridNano_2_cpu;
+                    return gridNano_write_cpu;
                 case DEVICE:
-                    return gridNano_2_device;
+                    return gridNano_write_device;
             };
             
         }
 
         void upload(){
             if(!uploaded){
-                handleNano_1.deviceUpload(0,false);
-                handleNano_2.deviceUpload(0,false);
+                handleNano_read.deviceUpload(0,false);
+                handleNano_write.deviceUpload(0,false);
                 uploaded = true;
+                gridNano_read_cpu = handleNano_read.grid<NanoGridType>();
+                gridNano_read_cpu = handleNano_write.grid<NanoGridType>();
+
+                gridNano_read_device = handleNano_read.deviceGrid<NanoGridType>();
+                gridNano_write_device = handleNano_write.deviceGrid<NanoGridType>();
 
             }
         }
 
         void download(){
             if(uploaded){
-                handleNano_1.deviceDownload(0,true);
-                handleNano_2.deviceDownload(0,true);
+                handleNano_read.deviceDownload(0,true);
+                handleNano_write.deviceDownload(0,true);
                 uploaded = false;
             }
         }
@@ -115,7 +117,7 @@ class Grid{
         void writeToFile(std::string filename){
             openvdb::io::File file(filename);
             openvdb::GridPtrVec grids;
-            grids.push_back(gridOpen_1_ptr);
+            grids.push_back(gridOpen_read_ptr);
             
             file.write(grids);
             file.close();
@@ -126,25 +128,53 @@ class Grid{
             openvdb::Coord coordenadas_open;
             nanovdb::Coord coordenadas_nano;
 
-            auto accessor_nano_2 = gridNano_2_cpu->getAccessor();
-            auto accessor_open_2 = gridOpen_1_ptr->getAccessor();
+            auto accessor_nano_write = gridNano_write_cpu->getAccessor();
+            auto accessor_open_write = gridOpen_write_ptr->getAccessor();
             for(int i  =0;i>-size_lado;i--){
                 for(int j = 0 ;j>-profundidad_total;j--){
                     for(int k = 0 ;k>-size_lado;k--){
                         coordenadas_nano = nanovdb::Coord(i,j,k);
                         coordenadas_open = openvdb::Coord(i,j,k);
                         if constexpr(std::is_same<OpenGridType,float>::value){
-                            accessor_open_2.setValue(coordenadas_open,accessor_nano_2.getValue(coordenadas_nano));
+                            accessor_open_write.setValue(coordenadas_open,accessor_nano_write.getValue(coordenadas_nano));
                         }else if constexpr(std::is_same<OpenGridType,openvdb::Vec3s>::value) {
-                            nanovdb::Vec3f vec = accessor_nano_2.getValue(coordenadas_nano);
-                            openvdb::Vec3s vec_open = accessor_open_2.getValue(coordenadas_open);
+                            nanovdb::Vec3f vec = accessor_nano_write.getValue(coordenadas_nano);
+                            openvdb::Vec3s vec_open = accessor_open_write.getValue(coordenadas_open);
                             for(int c =0 ;c<3;c++){
                                 vec_open[c] = vec[c];
                             }
-                            accessor_open_2.setValue(coordenadas_open,vec_open);
+                            accessor_open_write.setValue(coordenadas_open,vec_open);
                         }
                         
                     }
+                }
+            }
+        }
+
+        void fillRandom(){
+            std::random_device rd;
+
+            //
+            // Engines 
+            //
+            std::mt19937 e2(rd());
+            std::uniform_real_distribution<> dist(0, 10);
+            auto accessor_open = gridOpen_read_ptr->getAccessor();
+            for(int i  =0;i>-size_lado;i--){
+                for(int j = 0 ;j>-profundidad_total;j--){
+                    for(int k = 0 ;k>-size_lado;k--){
+                        openvdb::Coord coordenadas_open = openvdb::Coord(i,j,k);
+                        if constexpr(std::is_same<OpenGridType,float>::value){
+                            accessor_open.setValue(coordenadas_open,dist(e2));
+                        }else if constexpr(std::is_same<OpenGridType,openvdb::Vec3s>::value){
+                            openvdb::Vec3s vec;
+                            vec[0] = dist(e2);
+                            vec[1]  = dist(e2);
+                            vec[2] = dist(e2);
+                            accessor_open.setValue(coordenadas_open,vec);
+                        }
+                    }
+                    
                 }
             }
         }
