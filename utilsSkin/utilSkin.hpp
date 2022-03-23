@@ -19,11 +19,11 @@ struct dataSkin{
     float valueCorneum=0.0,valueSpinosum=0.0, valueBasale=0.0, valueDermis=0.0,valueHipoDermis=0.0;
 };
 
-template<class GridType>
-void make_layer(GridType& grid, int size,int depth, openvdb::Coord& origin,float value,int increment ){
-    using ValueT = typename GridType::ValueType;
+
+void make_layer(openvdb::FloatGrid::Accessor& accessor, int size,int depth, openvdb::Coord& origin,float value,int increment ){
+   
     // Distance value for the constant region exterior to the narrow band
-    const ValueT outside = grid.background();
+    //const ValueT outside = grid.background();
     // Distance value for the constant region interior to the narrow band
     // (by convention, the signed distance is negative in the interior of
     // a level set)
@@ -31,12 +31,12 @@ void make_layer(GridType& grid, int size,int depth, openvdb::Coord& origin,float
     // Use the background value as the width in voxels of the narrow band.
     // (The narrow band is centered on the surface of the sphere, which
     // has distance 0.)
-    int padding = int(openvdb::math::RoundUp(openvdb::math::Abs(outside)));
+    
     // The bounding box of the narrow band is 2*dim voxels on a side.
-    int dim = int(size + padding);
-    dim = size;
+    
+    int dim = size;
     // Get a voxel accessor.
-    typename GridType::Accessor accessor = grid.getAccessor();
+    //typename GridType::Accessor accessor = grid.getAccessor();
     
     int &i = origin[0], &j = origin[1], &k = origin[2];
     int min_size = origin[0]-size;
@@ -57,8 +57,8 @@ void make_layer(GridType& grid, int size,int depth, openvdb::Coord& origin,float
     }
 }
 
-template<class GridType>
-void createSkin(GridType& grid,int size_lado,int profundidad_total,openvdb::Coord coordenadas,dataSkin data){
+
+void createSkin(openvdb::FloatGrid::Accessor& accessor,int size_lado,int profundidad_total,openvdb::Coord coordenadas,dataSkin data){
     
     
     //Epidermis = 0.2mm
@@ -78,19 +78,19 @@ void createSkin(GridType& grid,int size_lado,int profundidad_total,openvdb::Coor
     int profundidadDermis = profundidad_total - profundidadEpidermis;
 
     //std::cout<<"Pre "<<coordenadas<<std::endl;
-    make_layer(grid,size_lado,profundidadCorneum,coordenadas,data.valueCorneum,1);
+    make_layer(accessor,size_lado,profundidadCorneum,coordenadas,data.valueCorneum,1);
     coordenadas[0] = 0;
     coordenadas[2] = 0 ;
-    make_layer(grid,size_lado,profundidadSpinosum,coordenadas,data.valueSpinosum,1);
+    make_layer(accessor,size_lado,profundidadSpinosum,coordenadas,data.valueSpinosum,1);
     coordenadas[0] = 0;
     coordenadas[2] = 0 ;
-    make_layer(grid,size_lado,profundidadBasale,coordenadas,data.valueBasale,1);
+    make_layer(accessor,size_lado,profundidadBasale,coordenadas,data.valueBasale,1);
     coordenadas[0] = 0;
     coordenadas[2] = 0 ;
-    make_layer(grid,size_lado,profundidadDermis,coordenadas,data.valueDermis,1);
+    make_layer(accessor,size_lado,profundidadDermis,coordenadas,data.valueDermis,1);
     coordenadas[0] = 0;
     coordenadas[2] = 0 ;
-    make_layer(grid,size_lado,profundidadHipoDermis,coordenadas,data.valueHipoDermis,1);
+    make_layer(accessor,size_lado,profundidadHipoDermis,coordenadas,data.valueHipoDermis,1);
 
     //std::cout<<"Post "<<coordenadas<<std::endl;
     //std::cout<<"Profundidad real "<<profundidadHipoDermis + profundidadBasale + profundidadSpinosum + profundidadCorneum+profundidadDermis<<std::endl;

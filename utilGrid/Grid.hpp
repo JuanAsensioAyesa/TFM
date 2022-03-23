@@ -176,8 +176,11 @@ class Grid{
                     for(int k = 0 ;k>-size_lado;k--){
                         openvdb::Coord coordenadas_open = openvdb::Coord(i,j,k);
                         if constexpr(std::is_same<OpenGridType,float>::value){
-                            accessor_open.setValue(coordenadas_open,dist(e2));
-                            accessor_open_write.setValue(coordenadas_open,dist(e2));
+                            //accessor_open.setValue(coordenadas_open,dist(e2));
+                            //accessor_open_write.setValue(coordenadas_open,dist(e2));
+
+                            accessor_open.setValue(coordenadas_open,i*j*k);
+                            accessor_open_write.setValue(coordenadas_open,i*j*k);
                         }else if constexpr(std::is_same<OpenGridType,openvdb::Vec3s>::value){
                             openvdb::Vec3s vec;
                             vec[0] = dist(e2);

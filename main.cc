@@ -42,10 +42,12 @@ int main(int argc,char * argv[]){
     int size_lado = 250;
     int profundidad_total = 150;
     openvdb::Coord coordenadas;
-    createSkin(*gridPrueba.getPtrOpenRead(),size_lado,profundidad_total,coordenadas,dataIniEndothelial);
-    createSkin(*gridPrueba.getPtrOpenWrite(),size_lado,profundidad_total,coordenadas,dataIniEndothelial);
+    openvdb::FloatGrid::Accessor accessor_read = gridPrueba.getAccessorOpenRead();
+    openvdb::FloatGrid::Accessor accessor_write = gridPrueba.getAccessorOpenWrite();
+    //createSkin(accessor_read,size_lado,profundidad_total,coordenadas,dataIniEndothelial);
+    //createSkin(accessor_write,size_lado,profundidad_total,coordenadas,dataIniEndothelial);
     auto accessor = gridPrueba.getAccessorOpenRead();
-    //gridPrueba.fillRandom();
+    gridPrueba.fillRandom();
     gridVectorPrueba.fillRandom();
     gridPrueba.upload();
     gridVectorPrueba.upload();
