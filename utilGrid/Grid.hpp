@@ -14,6 +14,7 @@
 #include <cuda_runtime_api.h>
 #include <cuda_device_runtime_api.h>
 #include <memory>
+#include <string>
 
 template<typename OpenGridType,class GridTypeOpen,class GridTypeNano>
 class Grid{
@@ -38,6 +39,7 @@ class Grid{
 
         int profundidad_total;
         int size_lado;
+        bool uploaded;
 
     public:
         
@@ -57,6 +59,7 @@ class Grid{
 
             gridNano_1_device = handleNano_1.deviceGrid<OpenGridType>();
             gridNano_2_device = handleNano_2.deviceGrid<OpenGridType>();
+            uploaded = false;
 
         }
 
@@ -89,7 +92,50 @@ class Grid{
             
         }
 
+        void upload(){
+            if(!uploaded){
+                handleNano_1.deviceUpload(false);
+                handleNano_2.deviceUpload(false);
+                uploaded = true;
 
+            }
+        }
+
+        void download(){
+            if(uploaded){
+                handleNano_1.deviceDownload(true);
+                handleNano_2.deviceDownload(true);
+                uploaded = false;
+            }
+        }
+
+        void writeToFile(string file){
+            openvdb::io::File file(file);
+            openvdb::GridPtrVec grid;
+            grids.push_back(gridOpen_1_ptr);
+            
+            file.write(grids);
+            file.close();
+        }
+
+
+        void copyNanoToOpen(){
+            openvdb::Coord coordenadas_open;
+            nanovdb::Coord coordenadas_nano;
+
+            auto accessor_nano_2 = gridNano_2_cpu->getAccessor();
+            auto accessor_open_2 = gridOpen_1_ptr->getAccessor();
+            for(int i  =0;i>-size_lado;i--){
+                for(int j = 0 ;j>-profundidad_total;j--){
+                    for(int k = 0 ;k>-size_lado;k--){
+                        coordenadas_nano = nanovdb::Coord(i,j,k);
+                        coordenadas_open = openvdb::Coord(i,j,k);
+                        
+                        accessor_open_2.setValue(coordenadas_open,accessor_nano_2.getValue(coordenadas_nano));
+                    }
+                }
+            }
+        }
         
 };
 
