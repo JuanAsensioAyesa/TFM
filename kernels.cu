@@ -113,3 +113,26 @@ void pruebaGradiente(nanovdb::Vec3fGrid  *grid_d,nanovdb::FloatGrid* gridSource 
     thrust::counting_iterator<uint64_t, thrust::device_system_tag> iter(0);
     thrust::for_each(iter, iter + 512*leafCount, kernel);
 }
+
+void pruebaLaplaciano(nanovdb::FloatGrid * grid_s,nanovdb::FloatGrid * grid_d,uint64_t leafCount){
+    auto kernel = [grid_s,grid_d] __device__ (const uint64_t n) {
+        auto *leaf_d = grid_d->tree().getFirstNode<0>() + (n >> 9);// this only works if grid->isSequential<0>() == true
+        auto *leaf_s = grid_s->tree().getFirstNode<0>() + (n >> 9);// this only works if grid->isSequential<0>() == true
+        const int i = n & 511;
+        
+        auto coord = leaf_d->offsetToGlobalCoord(i);
+        const nanovdb::Coord coord_nano = coord;
+        nanovdb::CurvatureStencil<nanovdb::FloatGrid> stencilNano(*grid_s);
+        stencilNano.moveTo(coord_nano);
+        float old_n = leaf_s->getValue(coord_nano);
+        float laplacian = stencilNano.laplacian();
+        //printf("%f\n",laplacian);
+        float derivative = laplacian  * old_n;
+        leaf_d->setValueOnly(coord_nano,old_n  + derivative  );//6 minutos //* 60 segundos
+
+    };
+    thrust::counting_iterator<uint64_t, thrust::device_system_tag> iter(0);
+    thrust::for_each(iter, iter + 512*leafCount, kernel);
+}
+
+

@@ -19,7 +19,57 @@
 #include <vector>
 #include <openvdb/math/Stencils.h>
 #include <nanovdb/util/Stencils.h>
+#include <vector>
+#include <fstream>
 
+
+float computeMean(nanovdb::FloatGrid * grid){
+    float accum = 0.0;
+    int size_lado = 250;
+    int profundidad_total = 150;
+    auto  accessor = grid->getAccessor();
+    nanovdb::Coord coord;
+    int count = 0 ;
+    for(int i  =0;i>-size_lado;i--){
+            for(int j = 0 ;j>-profundidad_total;j--){
+                for(int k = 0 ;k>-size_lado;k--){
+                    coord = openvdb::Coord(i,j,k);
+                    accum+=accessor.getValue(coord);
+                    count++;
+                }
+            }
+    }
+    return accum/count;
+}
+
+float computeMax(nanovdb::FloatGrid * grid){
+    float max = -100000.0;
+    int size_lado = 250;
+    int profundidad_total = 150;
+    auto  accessor = grid->getAccessor();
+    nanovdb::Coord coord;
+    
+    for(int i  =0;i>-size_lado;i--){
+            for(int j = 0 ;j>-profundidad_total;j--){
+                for(int k = 0 ;k>-size_lado;k--){
+                    coord = openvdb::Coord(i,j,k);
+                    float aux = accessor.getValue(coord);
+                    if(aux > max){
+                        max = aux;
+                    }
+                }
+            }
+    }
+    return max;
+}
+void writeVector(std::vector<float>& vec,std::string fileName){
+    std::ofstream myfile;
+    myfile.open (fileName);
+    for(auto data : vec){
+        myfile<<data<<std::endl;
+    }
+    myfile.close();
+}
 int main(int argc,char * argv[]){
     
     Grid<> gridSkin(250,150,0.0);
@@ -37,33 +87,74 @@ int main(int argc,char * argv[]){
     dataSkin dataIniEndothelial;
     dataIniEndothelial.valueBasale = 1.0;
     dataIniEndothelial.valueCorneum = 2.0;
-    dataIniEndothelial.valueDermis = 3.0;
-    dataIniEndothelial.valueHipoDermis = 4.0;
-    dataIniEndothelial.valueSpinosum = 5.0;
+    dataIniEndothelial.valueDermis = 10.0;
+    dataIniEndothelial.valueHipoDermis = 3.0;
+    dataIniEndothelial.valueSpinosum = 4.0;
     int size_lado = 250;
     int profundidad_total = 150;
     openvdb::Coord coordenadas;
-    openvdb::FloatGrid::Accessor accessor_read = gridSkin.getAccessorOpenRead();
+    openvdb::FloatGrid::Accessor accessor_1 = gridSkin.getAccessorOpenRead();
+    openvdb::FloatGrid::Accessor accessor_2 = gridSkin.getAccessorOpenWrite();
     
-    createSkin(accessor_read,size_lado,profundidad_total,coordenadas,dataIniEndothelial);
-    //createSkin(accessor_write,size_lado,profundidad_total,coordenadas,dataIniEndothelial);
+    gridSkin.fillRandom();
+    //createSkin(accessor_1,size_lado,profundidad_total,coordenadas,dataIniEndothelial);
+    //createSkin(accessor_2,size_lado,profundidad_total,coordenadas,dataIniEndothelial);
     
     
-    gridVectorPrueba.fillRandom();
-    gridSkin.upload();
-    gridVectorPrueba.upload();
-    
-
-    
-    pruebaGradiente(gridVectorPrueba.getPtrNanoWrite(typePointer::DEVICE),gridSkin.getPtrNanoRead(typePointer::DEVICE),gridSkin.getPtrNanoRead(typePointer::CPU)->tree().nodeCount(0));
-
-    gridVectorPrueba.download();
-    gridSkin.download();
-
-    gridVectorPrueba.copyNanoToOpen();
     //gridVectorPrueba.fillRandom();
-    gridVectorPrueba.writeToFile("myGrids.vdb");
+    gridSkin.upload();
+    //gridVectorPrueba.upload();
     
+    int veces = 11;
+    if(argc > 1){
+        veces = atoi(argv[1]);
+    }
+    nanovdb::FloatGrid* gridRead;
+    nanovdb::FloatGrid* gridWrite;
+    nanovdb::FloatGrid* gridRead_CPU;
+    nanovdb::FloatGrid* gridWrite_CPU;
+    gridSkin.writeToFile("pre.vdb");
+    auto  vector_medias = std::vector<float>();
+    for(int i = 0 ;i<veces;i++){
+        std::cout<<i<<std::endl;
+        if(i % 2 == 0 ){
+            gridRead = gridSkin.getPtrNanoRead(typePointer::DEVICE);
+            gridWrite = gridSkin.getPtrNanoWrite(typePointer::DEVICE);
+            
+
+        }else{
+            gridRead = gridSkin.getPtrNanoWrite(typePointer::DEVICE);
+            gridWrite = gridSkin.getPtrNanoRead(typePointer::DEVICE);
+            
+        }
+        
+        pruebaLaplaciano(gridRead,gridWrite,gridSkin.getPtrNanoRead(typePointer::CPU)->tree().nodeCount(0));
+        gridSkin.download();
+        
+        if(i%2==0){
+            gridRead_CPU = gridSkin.getPtrNanoRead(typePointer::CPU);
+            gridWrite_CPU = gridSkin.getPtrNanoWrite(typePointer::CPU);
+        }else{
+            gridRead_CPU = gridSkin.getPtrNanoWrite(typePointer::CPU);
+            gridWrite_CPU = gridSkin.getPtrNanoRead(typePointer::CPU);
+        }
+        vector_medias.push_back(computeMax(gridWrite_CPU));
+        //gridSkin.copyNanoToOpen();
+        gridSkin.upload();
+
+    }
+    //pruebaGradiente(gridVectorPrueba.getPtrNanoWrite(typePointer::DEVICE),gridSkin.getPtrNanoRead(typePointer::DEVICE),gridSkin.getPtrNanoRead(typePointer::CPU)->tree().nodeCount(0));
+
+    //gridVectorPrueba.download();
+    gridSkin.download();
+    gridSkin.copyNanoToOpen();
+    gridSkin.writeToFile("post.vdb"); 
+    //gridVectorPrueba.copyNanoToOpen();
+    //gridVectorPrueba.fillRandom();
+    //gridVectorPrueba.writeToFile("myGrids.vdb");
+    
+    writeVector(vector_medias,"vector_max.txt");
+
     //createSkin(*grid_open_2,size_lado,profundidad_total,coordenadas,dataIniEndothelial);
     
     // /**

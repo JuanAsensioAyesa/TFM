@@ -44,6 +44,7 @@ class Grid{
         int profundidad_total;
         int size_lado;
         bool uploaded;
+        bool first_upload;
 
     public:
         
@@ -54,11 +55,12 @@ class Grid{
             gridOpen_write_ptr = gridOpen_write.create(value);
             gridOpen_read_ptr = gridOpen_read.create(value);
             
-            
 
             
 
             
+
+            first_upload = true;
             uploaded = false;
 
         }
@@ -101,9 +103,13 @@ class Grid{
 
         void upload(){
             if(!uploaded){
-                std::cout<<"Upload"<<std::endl;
-                handleNano_read = nanovdb::openToNanoVDB<nanovdb::CudaDeviceBuffer>(gridOpen_read);
-                handleNano_write = nanovdb::openToNanoVDB<nanovdb::CudaDeviceBuffer>(gridOpen_write);
+                //std::cout<<"Upload"<<std::endl;
+                if(first_upload){
+                    handleNano_read = nanovdb::openToNanoVDB<nanovdb::CudaDeviceBuffer>(gridOpen_read);
+                    handleNano_write = nanovdb::openToNanoVDB<nanovdb::CudaDeviceBuffer>(gridOpen_write);
+                    first_upload = false;
+                }
+                
                 handleNano_read.deviceUpload(0,true);
                 handleNano_write.deviceUpload(0,true);
                 uploaded = true;
@@ -128,6 +134,7 @@ class Grid{
             openvdb::io::File file(filename);
             openvdb::GridPtrVec grids;
             grids.push_back(gridOpen_write_ptr);
+            grids.push_back(gridOpen_read_ptr);
             
             file.write(grids);
             file.close();
@@ -140,6 +147,8 @@ class Grid{
 
             auto accessor_nano_write = gridNano_write_cpu->getAccessor();
             auto accessor_open_write = gridOpen_write_ptr->getAccessor();
+            auto accessor_nano_read = gridNano_read_cpu->getAccessor();
+            auto accessor_open_read = gridOpen_read_ptr->getAccessor();
             for(int i  =0;i>-size_lado;i--){
                 for(int j = 0 ;j>-profundidad_total;j--){
                     for(int k = 0 ;k>-size_lado;k--){
@@ -147,13 +156,19 @@ class Grid{
                         coordenadas_open = openvdb::Coord(i,j,k);
                         if constexpr(std::is_same<OpenGridType,float>::value){
                             accessor_open_write.setValue(coordenadas_open,accessor_nano_write.getValue(coordenadas_nano));
+                            accessor_open_read.setValue(coordenadas_open,accessor_nano_read.getValue(coordenadas_nano));
                         }else if constexpr(std::is_same<OpenGridType,openvdb::Vec3s>::value) {
                             nanovdb::Vec3f vec = accessor_nano_write.getValue(coordenadas_nano);
                             openvdb::Vec3s vec_open = accessor_open_write.getValue(coordenadas_open);
+
+                            nanovdb::Vec3f vec_read = accessor_nano_read.getValue(coordenadas_nano);
+                            openvdb::Vec3s vec_open_read = accessor_open_read.getValue(coordenadas_open);
                             for(int c =0 ;c<3;c++){
                                 vec_open[c] = vec[c];
+                                vec_open_read[c] = vec[c];
                             }
                             accessor_open_write.setValue(coordenadas_open,vec_open);
+                            accessor_open_read.setValue(coordenadas_open,vec_open_read);
                         }
                         
                     }
@@ -176,11 +191,11 @@ class Grid{
                     for(int k = 0 ;k>-size_lado;k--){
                         openvdb::Coord coordenadas_open = openvdb::Coord(i,j,k);
                         if constexpr(std::is_same<OpenGridType,float>::value){
-                            //accessor_open.setValue(coordenadas_open,dist(e2));
-                            //accessor_open_write.setValue(coordenadas_open,dist(e2));
+                            accessor_open.setValue(coordenadas_open,dist(e2));
+                            accessor_open_write.setValue(coordenadas_open,dist(e2));
 
-                            accessor_open.setValue(coordenadas_open,i*i);
-                            accessor_open_write.setValue(coordenadas_open,i*i);
+                            //accessor_open.setValue(coordenadas_open,i*i);
+                            //accessor_open_write.setValue(coordenadas_open,i*i);
                         }else if constexpr(std::is_same<OpenGridType,openvdb::Vec3s>::value){
                             openvdb::Vec3s vec;
                             vec[0] = dist(e2);
