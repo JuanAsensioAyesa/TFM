@@ -85,11 +85,11 @@ int main(int argc,char * argv[]){
     // openvdb::FloatGrid::Ptr grid_open_2 =
     //    openvdb::FloatGrid::create(/*background value=*/2.0);
     dataSkin dataIniEndothelial;
-    dataIniEndothelial.valueBasale = 1;
-    dataIniEndothelial.valueCorneum = 2;
-    dataIniEndothelial.valueDermis = 3.0;
-    dataIniEndothelial.valueHipoDermis = 4;
-    dataIniEndothelial.valueSpinosum = 5;
+    dataIniEndothelial.valueBasale = 0;
+    dataIniEndothelial.valueCorneum = 0;
+    dataIniEndothelial.valueDermis = 0;
+    dataIniEndothelial.valueHipoDermis = 0;
+    dataIniEndothelial.valueSpinosum = 0;
     int size_lado = 250;
     int profundidad_total = 150;
     openvdb::Coord coordenadas;
@@ -102,7 +102,7 @@ int main(int argc,char * argv[]){
     
     
     //gridVectorPrueba.fillRandom();
-    //gridSkin.upload();
+    gridSkin.upload();
     //gridVectorPrueba.upload();
     
     int veces = 11;
@@ -113,6 +113,7 @@ int main(int argc,char * argv[]){
     nanovdb::FloatGrid* gridWrite;
     nanovdb::FloatGrid* gridRead_CPU;
     nanovdb::FloatGrid* gridWrite_CPU;
+    generateEndothelial(gridSkin.getPtrNano1(typePointer::DEVICE),gridSkin.getPtrNano1(typePointer::CPU)->tree().nodeCount(0),-39,-130,4);
     // gridSkin.writeToFile("pre.vdb");
     // auto  vector_medias = std::vector<float>();
     // for(int i = 0 ;i<veces;i++){
@@ -146,21 +147,10 @@ int main(int argc,char * argv[]){
     //pruebaGradiente(gridVectorPrueba.getPtrNanoWrite(typePointer::DEVICE),gridSkin.getPtrNanoRead(typePointer::DEVICE),gridSkin.getPtrNanoRead(typePointer::CPU)->tree().nodeCount(0));
 
     //gridVectorPrueba.download();
-    //gridSkin.download();
-    //gridSkin.copyNanoToOpen();
+    gridSkin.download();
+    gridSkin.copyNanoToOpen();
     gridSkin.writeToFile("post.vdb"); 
-    auto accessor = gridSkin.getAccessorOpen1();
-    for(int i  =0;i>-size_lado;i--){
-        for(int j = 0 ;j>-profundidad_total;j--){
-            for(int k = 0 ;k>-size_lado;k--){
-                openvdb::Coord coordenadas_open = openvdb::Coord(i,j,k);
-                float value = accessor.getValue(coordenadas_open);
-                if(value < 1 || value > 5 ){
-                    std::cout<<i<<" "<<j<<" "<<k<<std::endl;
-                }
-            }
-        }
-    }
+   
     
     
     //gridVectorPrueba.copyNanoToOpen();

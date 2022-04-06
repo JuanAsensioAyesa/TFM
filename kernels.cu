@@ -20,7 +20,7 @@ void generateEndothelial(nanovdb::FloatGrid *grid_d, uint64_t leafCount, int lim
         auto *leaf_d = grid_d->tree().getFirstNode<0>() + (n >> 9);// this only works if grid->isSequential<0>() == true
         const int i = n & 511;
         
-        auto coord  = leaf_d->origin();
+        auto coord = leaf_d->offsetToGlobalCoord(i);
         //printf("%d %d %d\n",coord[0],coord[1],coord[2]);
         if(coord[1]>lim_inf && coord[1]<lim_sup){
             if(coord[0]%modulo == 0 && coord[2]%modulo == 0 ){
