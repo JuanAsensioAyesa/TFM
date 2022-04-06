@@ -128,3 +128,15 @@ void copyNanoToOpen(const nanovdb::FloatGrid* gridNano,openvdb::FloatGrid& gridO
         }
     }
 }
+
+void createRectangle(openvdb::FloatGrid::Accessor& accessor,openvdb::Coord esquinaIzquierda,int size,float new_value){
+    //openvdb::FloatGrid::Accessor accessor = grid->getAccessor();
+    for(int i = 0;i<size;i++){
+        for(int j = 0;j<size;j++){
+            for(int k = 0 ;k<size;k++){
+                openvdb::Coord new_coords = openvdb::Coord(esquinaIzquierda[0]+i,esquinaIzquierda[1]+j,esquinaIzquierda[2]+k);
+                accessor.setValue(new_coords,new_value);
+            }
+        }
+    }    
+}

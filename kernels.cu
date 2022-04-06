@@ -178,16 +178,25 @@ void generateGradientTAF(nanovdb::FloatGrid * gridTAF,nanovdb::FloatGrid * gridE
         auto *leaf_s = gridTAF->tree().getFirstNode<0>() + (n >> 9);// this only works if grid->isSequential<0>() == true
         auto *leaf_Endothelial = gridEndothelial->tree().getFirstNode<0>() + (n >> 9);
         auto *leaf_Gradient = gradientTAF->tree().getFirstNode<0>() + (n >> 9);
+        auto accessor_aux = gradientTAF->getAccessor();
         const int i = n & 511;
         auto coord = leaf_s->offsetToGlobalCoord(i);
-        //const nanovdb::Coord coord_nano = coord;
+        const nanovdb::Coord coord_nano = coord;
         nanovdb::CurvatureStencil<nanovdb::FloatGrid> stencilNano(*gridTAF);
-        stencilNano.moveTo(coord);
+        //printf("%d %d %d\n",coord_nano[0],coord_nano[1],coord_nano[2]);
+        stencilNano.moveTo(coord_nano);
         auto gradient = stencilNano.gradient();
         float sensivity = chemotacticSensivity(leaf_s->getValue(i));
         float endothelialValue = leaf_Endothelial->getValue(i);
-        gradient = gradient * sensivity * endothelialValue;
+        gradient = gradient *sensivity *endothelialValue;
+        // //printf("%f %f %f\n",gradient[0],gradient[1],gradient[2]);
+        
+        //gradient[0] = 2.0;
+        //gradient[1] = 1.0 ;
+        //gradient[2] = 3.0;
         leaf_Gradient->setValueOnly(i,gradient);
+        //auto aux = accessor_aux.getValue(coord);
+        //printf("%f %f %f\n",aux[0],aux[1],aux[2]);
 
     };
     thrust::counting_iterator<uint64_t, thrust::device_system_tag> iter(0);
@@ -204,14 +213,15 @@ void generateGradientFibronectin(nanovdb::FloatGrid * gridFibronectin,nanovdb::F
         auto *leaf_Gradient = gradientFibronectin->tree().getFirstNode<0>() + (n >> 9);
         const int i = n & 511;
         auto coord = leaf_s->offsetToGlobalCoord(i);
-        //const nanovdb::Coord coord_nano = coord;
+        const nanovdb::Coord coord_nano = coord;
         nanovdb::CurvatureStencil<nanovdb::FloatGrid> stencilNano(*gridFibronectin);
-        stencilNano.moveTo(coord);
+        stencilNano.moveTo(coord_nano);
         auto gradient = stencilNano.gradient();
         
         float endothelialValue = leaf_Endothelial->getValue(i);
         gradient = gradient  * endothelialValue;
-        leaf_Gradient->setValueOnly(i,gradient);
+        
+        leaf_Gradient->setValueOnly(coord,gradient);
 
     };
     thrust::counting_iterator<uint64_t, thrust::device_system_tag> iter(0);

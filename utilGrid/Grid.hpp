@@ -59,7 +59,8 @@ class Grid{
             
             
             
-
+            // std::cout<<"ptr 1 "<<gridOpen_1_ptr<<std::endl;
+            // std::cout<<"ptr 2 "<<gridOpen_2_ptr<<std::endl;
             
             
 
@@ -200,7 +201,7 @@ class Grid{
                                     vec_open[c] = vec[c];
                                 }
                                 
-                                vec_open_1[c] = vec[c];
+                                vec_open_1[c] = vec_1[c];
                             }
                             if(createBoth){
                                 accessor_open_2.setValue(coordenadas_open,vec_open);
@@ -244,8 +245,8 @@ class Grid{
                         }else if constexpr(std::is_same<OpenGridType,openvdb::Vec3s>::value){
                             openvdb::Vec3s vec;
                             vec[0] = dist(e2);
-                            vec[1]  = dist(e2);
-                            vec[2] = dist(e2);
+                            vec[1]  = dist(e2) * 0;
+                            vec[2] = dist(e2) * 0;
                             accessor_open.setValue(coordenadas_open,vec);
                             if(createBoth){
                                 accessor_open_2.setValue(coordenadas_open,vec);
