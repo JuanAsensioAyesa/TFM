@@ -72,7 +72,7 @@ void writeVector(std::vector<float>& vec,std::string fileName){
 }
 int main(int argc,char * argv[]){
     
-    Grid<> gridSkin(250,150,0.0);
+    Grid<> gridSkin(250,150,4.0);
     openvdb::Vec3s ini = {0.0,0.0,0.0};
     Grid<openvdb::Vec3s,nanovdb::Vec3f,openvdb::Vec3SGrid,nanovdb::Vec3fGrid> gridVectorPrueba(250,150,ini);
     
@@ -85,20 +85,20 @@ int main(int argc,char * argv[]){
     // openvdb::FloatGrid::Ptr grid_open_2 =
     //    openvdb::FloatGrid::create(/*background value=*/2.0);
     dataSkin dataIniEndothelial;
-    dataIniEndothelial.valueBasale = 1.0;
-    dataIniEndothelial.valueCorneum = 2.0;
-    dataIniEndothelial.valueDermis = 10.0;
-    dataIniEndothelial.valueHipoDermis = 3.0;
-    dataIniEndothelial.valueSpinosum = 4.0;
+    dataIniEndothelial.valueBasale = 1;
+    dataIniEndothelial.valueCorneum = 2;
+    dataIniEndothelial.valueDermis = 3.0;
+    dataIniEndothelial.valueHipoDermis = 4;
+    dataIniEndothelial.valueSpinosum = 5;
     int size_lado = 250;
     int profundidad_total = 150;
     openvdb::Coord coordenadas;
-    openvdb::FloatGrid::Accessor accessor_1 = gridSkin.getAccessorOpenRead();
-    openvdb::FloatGrid::Accessor accessor_2 = gridSkin.getAccessorOpenWrite();
+    openvdb::FloatGrid::Accessor accessor_1 = gridSkin.getAccessorOpen1();
+    openvdb::FloatGrid::Accessor accessor_2 = gridSkin.getAccessorOpen2();
     
-    gridSkin.fillRandom();
-    //createSkin(accessor_1,size_lado,profundidad_total,coordenadas,dataIniEndothelial);
-    //createSkin(accessor_2,size_lado,profundidad_total,coordenadas,dataIniEndothelial);
+    //gridSkin.fillRandom();
+    createSkin(accessor_1,size_lado,profundidad_total,coordenadas,dataIniEndothelial);
+    createSkin(accessor_2,size_lado,profundidad_total,coordenadas,dataIniEndothelial);
     
     
     //gridVectorPrueba.fillRandom();
@@ -113,36 +113,36 @@ int main(int argc,char * argv[]){
     nanovdb::FloatGrid* gridWrite;
     nanovdb::FloatGrid* gridRead_CPU;
     nanovdb::FloatGrid* gridWrite_CPU;
-    gridSkin.writeToFile("pre.vdb");
-    auto  vector_medias = std::vector<float>();
-    for(int i = 0 ;i<veces;i++){
-        std::cout<<i<<std::endl;
-        if(i % 2 == 0 ){
-            gridRead = gridSkin.getPtrNanoRead(typePointer::DEVICE);
-            gridWrite = gridSkin.getPtrNanoWrite(typePointer::DEVICE);
+    // gridSkin.writeToFile("pre.vdb");
+    // auto  vector_medias = std::vector<float>();
+    // for(int i = 0 ;i<veces;i++){
+    //     std::cout<<i<<std::endl;
+    //     if(i % 2 == 0 ){
+    //         gridRead = gridSkin.getPtrNano1(typePointer::DEVICE);
+    //         gridWrite = gridSkin.getPtrNano2(typePointer::DEVICE);
             
 
-        }else{
-            gridRead = gridSkin.getPtrNanoWrite(typePointer::DEVICE);
-            gridWrite = gridSkin.getPtrNanoRead(typePointer::DEVICE);
+    //     }else{
+    //         gridRead = gridSkin.getPtrNano2(typePointer::DEVICE);
+    //         gridWrite = gridSkin.getPtrNano1(typePointer::DEVICE);
             
-        }
+    //     }
         
-        pruebaLaplaciano(gridRead,gridWrite,gridSkin.getPtrNanoRead(typePointer::CPU)->tree().nodeCount(0));
-        gridSkin.download();
+    //     pruebaLaplaciano(gridRead,gridWrite,gridSkin.getPtrNano1(typePointer::CPU)->tree().nodeCount(0));
+    //     gridSkin.download();
         
-        if(i%2==0){
-            gridRead_CPU = gridSkin.getPtrNanoRead(typePointer::CPU);
-            gridWrite_CPU = gridSkin.getPtrNanoWrite(typePointer::CPU);
-        }else{
-            gridRead_CPU = gridSkin.getPtrNanoWrite(typePointer::CPU);
-            gridWrite_CPU = gridSkin.getPtrNanoRead(typePointer::CPU);
-        }
-        vector_medias.push_back(computeMax(gridWrite_CPU));
-        //gridSkin.copyNanoToOpen();
-        gridSkin.upload();
+    //     if(i%2==0){
+    //         gridRead_CPU = gridSkin.getPtrNano1(typePointer::CPU);
+    //         gridWrite_CPU = gridSkin.getPtrNano2(typePointer::CPU);
+    //     }else{
+    //         gridRead_CPU = gridSkin.getPtrNano2(typePointer::CPU);
+    //         gridWrite_CPU = gridSkin.getPtrNano1(typePointer::CPU);
+    //     }
+    //     vector_medias.push_back(computeMax(gridWrite_CPU));
+    //     //gridSkin.copyNanoToOpen();
+    //     gridSkin.upload();
 
-    }
+    // }
     //pruebaGradiente(gridVectorPrueba.getPtrNanoWrite(typePointer::DEVICE),gridSkin.getPtrNanoRead(typePointer::DEVICE),gridSkin.getPtrNanoRead(typePointer::CPU)->tree().nodeCount(0));
 
     //gridVectorPrueba.download();
@@ -153,7 +153,7 @@ int main(int argc,char * argv[]){
     //gridVectorPrueba.fillRandom();
     //gridVectorPrueba.writeToFile("myGrids.vdb");
     
-    writeVector(vector_medias,"vector_max.txt");
+    //writeVector(vector_medias,"vector_max.txt");
 
     //createSkin(*grid_open_2,size_lado,profundidad_total,coordenadas,dataIniEndothelial);
     
