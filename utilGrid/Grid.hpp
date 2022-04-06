@@ -23,11 +23,10 @@ enum typePointer{CPU,DEVICE};
 template<typename OpenGridType=float,typename NanoGridType=float,class GridTypeOpen=openvdb::FloatGrid,class GridOpenPtr = openvdb::FloatGrid::Ptr,class GridTypeNano=nanovdb::FloatGrid>
 class Grid{
     private:
-        GridTypeOpen gridOpen_1;
-        GridTypeOpen gridOpen_2;
+
         
-        std::shared_ptr<GridTypeOpen> gridOpen_1_ptr;
-        std::shared_ptr<GridTypeOpen>  gridOpen_2_ptr;
+        GridOpenPtr gridOpen_1_ptr;
+        GridOpenPtr  gridOpen_2_ptr;
 
         nanovdb::GridHandle<nanovdb::CudaDeviceBuffer> handleNano_1;
         nanovdb::GridHandle<nanovdb::CudaDeviceBuffer> handleNano_2;
@@ -52,8 +51,8 @@ class Grid{
             this->profundidad_total = profundidad_total;
             this->size_lado = size_lado;
 
-            gridOpen_2_ptr = gridOpen_2.create(value);
-            gridOpen_1_ptr = gridOpen_1.create(value);
+            gridOpen_2_ptr = GridTypeOpen::create(value);
+            gridOpen_1_ptr = GridTypeOpen::create(value);
             
 
             
@@ -75,11 +74,11 @@ class Grid{
         }
         
         typename GridTypeOpen::Accessor getAccessorOpen1(){
-            return gridOpen_1.getAccessor();
+            return gridOpen_1_ptr->getAccessor();
         }
 
         typename GridTypeOpen::Accessor getAccessorOpen2(){
-            return gridOpen_2.getAccessor();
+            return gridOpen_2_ptr->getAccessor();
         }
         
         GridTypeNano* getPtrNano1(typePointer type){
@@ -106,8 +105,8 @@ class Grid{
             if(!uploaded){
                 //std::cout<<"Upload"<<std::endl;
                 if(first_upload){
-                    handleNano_1 = nanovdb::openToNanoVDB<nanovdb::CudaDeviceBuffer>(gridOpen_1);
-                    handleNano_2 = nanovdb::openToNanoVDB<nanovdb::CudaDeviceBuffer>(gridOpen_2);
+                    handleNano_1 = nanovdb::openToNanoVDB<nanovdb::CudaDeviceBuffer>(*gridOpen_1_ptr);
+                    handleNano_2 = nanovdb::openToNanoVDB<nanovdb::CudaDeviceBuffer>(*gridOpen_2_ptr);
                     first_upload = false;
                 }
                 
@@ -185,18 +184,18 @@ class Grid{
             //
             std::mt19937 e2(rd());
             std::uniform_real_distribution<> dist(0, 10);
-            auto accessor_open = gridOpen_1.getAccessor();
-            auto accessor_open_2 = gridOpen_2.getAccessor();
+            auto accessor_open = gridOpen_1_ptr->getAccessor();
+            auto accessor_open_2 = gridOpen_2_ptr->getAccessor();
             for(int i  =0;i>-size_lado;i--){
                 for(int j = 0 ;j>-profundidad_total;j--){
                     for(int k = 0 ;k>-size_lado;k--){
                         openvdb::Coord coordenadas_open = openvdb::Coord(i,j,k);
                         if constexpr(std::is_same<OpenGridType,float>::value){
-                            //accessor_open.setValue(coordenadas_open,dist(e2));
-                            //accessor_open_2.setValue(coordenadas_open,dist(e2));
+                            accessor_open.setValue(coordenadas_open,dist(e2));
+                            accessor_open_2.setValue(coordenadas_open,dist(e2));
 
-                            accessor_open.setValue(coordenadas_open,i*i*i);
-                            accessor_open_2.setValue(coordenadas_open,i*i*i);
+                            //accessor_open.setValue(coordenadas_open,i*i*i);
+                            //accessor_open_2.setValue(coordenadas_open,i*i*i);
                         }else if constexpr(std::is_same<OpenGridType,openvdb::Vec3s>::value){
                             openvdb::Vec3s vec;
                             vec[0] = dist(e2);

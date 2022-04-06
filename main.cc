@@ -72,9 +72,9 @@ void writeVector(std::vector<float>& vec,std::string fileName){
 }
 int main(int argc,char * argv[]){
     
-    Grid<> gridSkin(250,150,4.0);
+    Grid<> gridSkin(250,150,0);
     openvdb::Vec3s ini = {0.0,0.0,0.0};
-    Grid<openvdb::Vec3s,nanovdb::Vec3f,openvdb::Vec3SGrid,nanovdb::Vec3fGrid> gridVectorPrueba(250,150,ini);
+    Grid<openvdb::Vec3s,nanovdb::Vec3f,openvdb::Vec3SGrid,openvdb::Vec3SGrid::Ptr,nanovdb::Vec3fGrid> gridVectorPrueba(250,150,ini);
     
     /**
      * Creamos la piel con los datos pertinentes
@@ -102,7 +102,7 @@ int main(int argc,char * argv[]){
     
     
     //gridVectorPrueba.fillRandom();
-    gridSkin.upload();
+    //gridSkin.upload();
     //gridVectorPrueba.upload();
     
     int veces = 11;
@@ -146,9 +146,23 @@ int main(int argc,char * argv[]){
     //pruebaGradiente(gridVectorPrueba.getPtrNanoWrite(typePointer::DEVICE),gridSkin.getPtrNanoRead(typePointer::DEVICE),gridSkin.getPtrNanoRead(typePointer::CPU)->tree().nodeCount(0));
 
     //gridVectorPrueba.download();
-    gridSkin.download();
-    gridSkin.copyNanoToOpen();
+    //gridSkin.download();
+    //gridSkin.copyNanoToOpen();
     gridSkin.writeToFile("post.vdb"); 
+    auto accessor = gridSkin.getAccessorOpen1();
+    for(int i  =0;i>-size_lado;i--){
+        for(int j = 0 ;j>-profundidad_total;j--){
+            for(int k = 0 ;k>-size_lado;k--){
+                openvdb::Coord coordenadas_open = openvdb::Coord(i,j,k);
+                float value = accessor.getValue(coordenadas_open);
+                if(value < 1 || value > 5 ){
+                    std::cout<<i<<" "<<j<<" "<<k<<std::endl;
+                }
+            }
+        }
+    }
+    
+    
     //gridVectorPrueba.copyNanoToOpen();
     //gridVectorPrueba.fillRandom();
     //gridVectorPrueba.writeToFile("myGrids.vdb");
