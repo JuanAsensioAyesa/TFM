@@ -10,6 +10,9 @@
 #include <nanovdb/util/CudaDeviceBuffer.h>
 #include "pruebaThrust.h"
 #include <nanovdb/util/Stencils.h>
+
+const float time_factor = 6 * 60; //Timestep de 6 minutos pasado a segundos
+
 /**
  * @brief Genera la estrucura inicial de las celulas endoteliales, cada cilindro tendra el tamanio de un leaf node (8x8x8)
  * 
@@ -81,9 +84,9 @@ void equationTAF(nanovdb::FloatGrid* input_grid_endothelial,nanovdb::FloatGrid* 
 
         float c = accessor_TAF_in.getValue(coord);
 
-        float new_c = -n_c * n_i * c;
-
-        leaf_d->setValueOnly(i,new_c);
+        float derivative = -n_c * n_i * c;
+        float old_c = leaf_d->getValue(i);
+        leaf_d->setValueOnly(i,old_c + derivative * time_factor);
 
         
 
@@ -114,25 +117,103 @@ void pruebaGradiente(nanovdb::Vec3fGrid  *grid_d,nanovdb::FloatGrid* gridSource 
     thrust::for_each(iter, iter + 512*leafCount, kernel);
 }
 
-void pruebaLaplaciano(nanovdb::FloatGrid * grid_s,nanovdb::FloatGrid * grid_d,uint64_t leafCount){
-    auto kernel = [grid_s,grid_d] __device__ (const uint64_t n) {
+
+
+/*
+    Ecuacion 6
+*/
+void equationEndothelial(nanovdb::FloatGrid * grid_s,nanovdb::FloatGrid * grid_d,nanovdb::FloatGrid* gridTAF,nanovdb::FloatGrid* gridFibronectin,nanovdb::Vec3fGrid* gradientTAF,nanovdb::Vec3fGrid* gradientFibronectin,uint64_t leafCount){
+    auto kernel = [grid_s,grid_d,gridTAF,gridFibronectin,gradientTAF,gradientFibronectin] __device__ (const uint64_t n) {
         auto *leaf_d = grid_d->tree().getFirstNode<0>() + (n >> 9);// this only works if grid->isSequential<0>() == true
         auto *leaf_s = grid_s->tree().getFirstNode<0>() + (n >> 9);// this only works if grid->isSequential<0>() == true
         const int i = n & 511;
         
         auto coord = leaf_d->offsetToGlobalCoord(i);
         const nanovdb::Coord coord_nano = coord;
+        /*
+            Primera parte: Difusion aleatoria
+        */
         nanovdb::CurvatureStencil<nanovdb::FloatGrid> stencilNano(*grid_s);
         stencilNano.moveTo(coord_nano);
         float old_n = leaf_s->getValue(coord_nano);
         float laplacian = stencilNano.laplacian();
         //printf("%f\n",laplacian);
-        float derivative = laplacian  * old_n;
-        leaf_d->setValueOnly(coord_nano,old_n  + derivative  );//6 minutos //* 60 segundos
+        float factorEndothelial = laplacian * 0.0003 ;
+        /*
+            Segunda parte, chimiotaxis TAF
+        */
+        nanovdb::CurvatureStencil<nanovdb::Vec3fGrid> stencilTAF(*gradientTAF);
+        stencilTAF.moveTo(coord_nano);
+        auto gradientTAF = stencilTAF.gradient();
+        float factorTAF = gradientTAF[0][0] + gradientTAF[1][1] + gradientTAF[2][2];
+        /*
+            Tercera parte, Fibronectin
+        */
+        nanovdb::CurvatureStencil<nanovdb::Vec3fGrid> stencilFibronectin(*gradientFibronectin);
+        stencilFibronectin.moveTo(coord_nano);
+        auto gradientFibronectin = stencilFibronectin.gradient();
+        float factorFibronectin = gradientFibronectin[0][0] + gradientFibronectin[1][1] + gradientFibronectin[2][2];
+        factorFibronectin = factorFibronectin * 0.28;
+        
+
+
+        float derivative = factorEndothelial - factorTAF - factorFibronectin;
+        leaf_d->setValueOnly(coord_nano,old_n  + derivative * time_factor );//6 minutos //* 60 segundos
 
     };
     thrust::counting_iterator<uint64_t, thrust::device_system_tag> iter(0);
     thrust::for_each(iter, iter + 512*leafCount, kernel);
 }
 
+__device__ float chemotacticSensivity(float c){
+    float chemotacticMigration = 0.38;
+    float chemotacticConstant = 0.6;
+    return chemotacticMigration /(1 + chemotacticConstant*c);
+}
+/*
+    Genera el gradiente escalado del TAF, para poder calcular la divergencia
+*/
+void generateGradientTAF(nanovdb::FloatGrid * gridTAF,nanovdb::FloatGrid * gridEndothelial,nanovdb::Vec3fGrid* gradientTAF,uint64_t leafCount){
+    auto kernel = [gridTAF,gridEndothelial,gradientTAF] __device__ (const uint64_t n) {
+        auto *leaf_s = gridTAF->tree().getFirstNode<0>() + (n >> 9);// this only works if grid->isSequential<0>() == true
+        auto *leaf_Endothelial = gridEndothelial->tree().getFirstNode<0>() + (n >> 9);
+        auto *leaf_Gradient = gradientTAF->tree().getFirstNode<0>() + (n >> 9);
+        const int i = n & 511;
+        auto coord = leaf_s->offsetToGlobalCoord(i);
+        //const nanovdb::Coord coord_nano = coord;
+        nanovdb::CurvatureStencil<nanovdb::FloatGrid> stencilNano(*gridTAF);
+        stencilNano.moveTo(coord);
+        auto gradient = stencilNano.gradient();
+        float sensivity = chemotacticSensivity(leaf_s->getValue(i));
+        float endothelialValue = leaf_Endothelial->getValue(i);
+        gradient = gradient * sensivity * endothelialValue;
+        leaf_Gradient->setValueOnly(i,gradient);
 
+    };
+    thrust::counting_iterator<uint64_t, thrust::device_system_tag> iter(0);
+    thrust::for_each(iter, iter + 512*leafCount, kernel);
+}
+
+/*
+    Genera el gradiente escalado de la Fibronectina, para poder calcular la divergencia
+*/
+void generateGradientFibronectin(nanovdb::FloatGrid * gridFibronectin,nanovdb::FloatGrid * gridEndothelial,nanovdb::Vec3fGrid* gradientFibronectin,uint64_t leafCount){
+    auto kernel = [gridFibronectin,gridEndothelial,gradientFibronectin] __device__ (const uint64_t n) {
+        auto *leaf_s = gridFibronectin->tree().getFirstNode<0>() + (n >> 9);// this only works if grid->isSequential<0>() == true
+        auto *leaf_Endothelial = gridEndothelial->tree().getFirstNode<0>() + (n >> 9);
+        auto *leaf_Gradient = gradientFibronectin->tree().getFirstNode<0>() + (n >> 9);
+        const int i = n & 511;
+        auto coord = leaf_s->offsetToGlobalCoord(i);
+        //const nanovdb::Coord coord_nano = coord;
+        nanovdb::CurvatureStencil<nanovdb::FloatGrid> stencilNano(*gridFibronectin);
+        stencilNano.moveTo(coord);
+        auto gradient = stencilNano.gradient();
+        
+        float endothelialValue = leaf_Endothelial->getValue(i);
+        gradient = gradient  * endothelialValue;
+        leaf_Gradient->setValueOnly(i,gradient);
+
+    };
+    thrust::counting_iterator<uint64_t, thrust::device_system_tag> iter(0);
+    thrust::for_each(iter, iter + 512*leafCount, kernel);
+}
