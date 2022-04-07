@@ -11,7 +11,7 @@
 #include "pruebaThrust.h"
 #include <nanovdb/util/Stencils.h>
 
-const float time_factor = 6 * 60; //Timestep de 6 minutos pasado a segundos
+const float time_factor = 6 ; //Timestep de 6 minutos pasado a segundos
 
 /**
  * @brief Genera la estrucura inicial de las celulas endoteliales, cada cilindro tendra el tamanio de un leaf node (8x8x8)
@@ -89,6 +89,115 @@ void equationTAF(nanovdb::FloatGrid* input_grid_endothelial,nanovdb::FloatGrid* 
         leaf_d->setValueOnly(i,old_c + derivative * time_factor);
 
         
+
+    };
+    thrust::counting_iterator<uint64_t, thrust::device_system_tag> iter(0);
+    thrust::for_each(iter, iter + 512*leafCount, kernel);
+}
+
+void equationFibronectin(nanovdb::FloatGrid* input_grid_endothelial,nanovdb::FloatGrid* input_grid_Fibronectin,nanovdb::FloatGrid* input_grid_MDE,nanovdb::FloatGrid* output_grid_Fibronectin,uint64_t leafCount){
+    auto kernel = [input_grid_endothelial,input_grid_Fibronectin,input_grid_MDE,output_grid_Fibronectin] __device__ (const uint64_t n) {
+        auto *leaf_d = output_grid_Fibronectin->tree().getFirstNode<0>() + (n >> 9);// this only works if grid->isSequential<0>() == true
+        auto *leaf_s = input_grid_Fibronectin->tree().getFirstNode<0>() + (n >> 9);
+        auto *leaf_mde = input_grid_MDE->tree().getFirstNode<0>() + (n >> 9);
+        const int i = n & 511;
+
+        //Coordenadas del voxel globales
+        auto coord = leaf_d->offsetToGlobalCoord(i);
+        auto accessor_endothelial = input_grid_endothelial->tree().getAccessor();
+        auto accessor_Fibronectin_in = input_grid_Fibronectin->tree().getAccessor();
+        auto accessor_Fibronectin_out = output_grid_Fibronectin->tree().getAccessor();
+        int incrementos_vecinos[] = {-1,0,1};
+        int len_incrementos = 3;
+        
+        float n_i = 0;
+        bool esVecino = false;
+        //Se calcula n_i , que determina si se es vecino de una endothelial
+        for(int i_incremento_x = 0;i_incremento_x<len_incrementos && !esVecino;i_incremento_x++){
+            for(int i_incremento_y = 0 ;i_incremento_y<len_incrementos && !esVecino;i_incremento_y++){
+                for(int i_incremento_z = 0 ;i_incremento_z<len_incrementos && !esVecino;i_incremento_z++){
+                    int incremento_x = incrementos_vecinos[i_incremento_x];
+                    int incremento_y = incrementos_vecinos[i_incremento_y];
+                    int incremento_z = incrementos_vecinos[i_incremento_z];
+
+
+                    if(accessor_endothelial.isActive(coord.offsetBy(incremento_x,incremento_y,incremento_z))){
+                        n_i = accessor_endothelial.getValue(coord.offsetBy(incremento_x,incremento_y,incremento_z));
+                        
+                    }
+                    esVecino = n_i != 0.0;//Esto igual esta feo
+                    
+                }
+            }
+        }
+        
+        float production_rate = 0.0125;
+        float degradation_rate = 0.1;
+        if(esVecino){
+            n_i = 1.0;
+        }else{
+            n_i = 0.0;
+        }
+        float old_f = leaf_s->getValue(i);
+        float old_mde = leaf_mde->getValue(i);
+
+        float derivative = production_rate * n_i - degradation_rate * old_f * old_mde;
+        leaf_d->setValueOnly(i,old_f + derivative*time_factor);
+
+    };
+    thrust::counting_iterator<uint64_t, thrust::device_system_tag> iter(0);
+    thrust::for_each(iter, iter + 512*leafCount, kernel);
+}
+
+void equationMDE(nanovdb::FloatGrid* input_grid_endothelial,nanovdb::FloatGrid* input_grid_MDE,nanovdb::FloatGrid* output_grid_MDE,uint64_t leafCount){
+    auto kernel = [input_grid_endothelial,input_grid_MDE,output_grid_MDE] __device__ (const uint64_t n) {
+        auto *leaf_d = output_grid_MDE->tree().getFirstNode<0>() + (n >> 9);// this only works if grid->isSequential<0>() == true
+        auto *leaf_s = input_grid_MDE->tree().getFirstNode<0>() + (n >> 9);
+        const int i = n & 511;
+
+        //Coordenadas del voxel globales
+        auto coord = leaf_d->offsetToGlobalCoord(i);
+        auto accessor_endothelial = input_grid_endothelial->tree().getAccessor();
+        auto accessor_Fibronectin_in = input_grid_MDE->tree().getAccessor();
+        auto accessor_Fibronectin_out = output_grid_MDE->tree().getAccessor();
+        int incrementos_vecinos[] = {-1,0,1};
+        int len_incrementos = 3;
+        
+        float n_i = 0;
+        bool esVecino = false;
+        //Se calcula n_i , que determina si se es vecino de una endothelial
+        for(int i_incremento_x = 0;i_incremento_x<len_incrementos && !esVecino;i_incremento_x++){
+            for(int i_incremento_y = 0 ;i_incremento_y<len_incrementos && !esVecino;i_incremento_y++){
+                for(int i_incremento_z = 0 ;i_incremento_z<len_incrementos && !esVecino;i_incremento_z++){
+                    int incremento_x = incrementos_vecinos[i_incremento_x];
+                    int incremento_y = incrementos_vecinos[i_incremento_y];
+                    int incremento_z = incrementos_vecinos[i_incremento_z];
+
+
+                    if(accessor_endothelial.isActive(coord.offsetBy(incremento_x,incremento_y,incremento_z))){
+                        n_i = accessor_endothelial.getValue(coord.offsetBy(incremento_x,incremento_y,incremento_z));
+                        
+                    }
+                    esVecino = n_i != 0.0;//Esto igual esta feo
+                    
+                }
+            }
+        }
+        float production_rate = 0.0000015;
+        float diffussion_coefficient = 0.0025;
+        float degradation_rate = 0.75;
+        nanovdb::CurvatureStencil<nanovdb::FloatGrid> stencilNano(*input_grid_MDE);
+        stencilNano.moveTo(coord);
+        float laplacian = stencilNano.laplacian();
+        if(esVecino){
+            n_i = 1.0;
+        }else{
+            n_i = 0.0;
+        }
+        float old_mde = leaf_s->getValue(i);
+        float derivative = n_i * production_rate + diffussion_coefficient * laplacian - degradation_rate * old_mde;
+
+        leaf_s->setValueOnly(i,old_mde + derivative * time_factor);
 
     };
     thrust::counting_iterator<uint64_t, thrust::device_system_tag> iter(0);
