@@ -48,6 +48,7 @@ void generateEndothelial(nanovdb::FloatGrid *grid_d, uint64_t leafCount, int lim
 void equationTAF(nanovdb::FloatGrid* input_grid_endothelial,nanovdb::FloatGrid* input_grid_TAF,nanovdb::FloatGrid* output_grid_TAF,uint64_t leafCount){
     auto kernel = [input_grid_endothelial,input_grid_TAF,output_grid_TAF] __device__ (const uint64_t n){
         auto *leaf_d = output_grid_TAF->tree().getFirstNode<0>() + (n >> 9);// this only works if grid->isSequential<0>() == true
+        auto *leaf_s = input_grid_TAF->tree().getFirstNode<0>() + (n >> 9);
         const int i = n & 511;
 
         //Coordenadas del voxel globales
@@ -73,7 +74,7 @@ void equationTAF(nanovdb::FloatGrid* input_grid_endothelial,nanovdb::FloatGrid* 
                         n_i = accessor_endothelial.getValue(coord.offsetBy(incremento_x,incremento_y,incremento_z));
                         
                     }
-                    esVecino = n_i != 0.0;//Esto igual esta feo
+                    esVecino = n_i != 0;//Esto igual esta feo
                     
                 }
             }
@@ -81,12 +82,21 @@ void equationTAF(nanovdb::FloatGrid* input_grid_endothelial,nanovdb::FloatGrid* 
 
         float n_c = 0.025;
         //printf("%f\n",n_i);
-
-        float c = accessor_TAF_in.getValue(coord);
-
+        if(esVecino){
+            n_i = 1.0;
+        }else{
+            n_i  = 0.0;
+        }
+        float c = leaf_s->getValue(i);
+        
+        
         float derivative = -n_c * n_i * c;
-        float old_c = leaf_d->getValue(i);
+        // if(c > 0){
+        //     printf("%f %f %f\n",c,n_i,derivative);
+        // }
+        float old_c = leaf_s->getValue(i);
         leaf_d->setValueOnly(i,old_c + derivative * time_factor);
+        
 
         
 
@@ -138,10 +148,14 @@ void equationFibronectin(nanovdb::FloatGrid* input_grid_endothelial,nanovdb::Flo
         }else{
             n_i = 0.0;
         }
+        
         float old_f = leaf_s->getValue(i);
         float old_mde = leaf_mde->getValue(i);
 
         float derivative = production_rate * n_i - degradation_rate * old_f * old_mde;
+        // if(derivative > 0 ){
+        //     printf("%f\n",old_f + derivative * time_factor);
+        // }
         leaf_d->setValueOnly(i,old_f + derivative*time_factor);
 
     };
@@ -184,8 +198,10 @@ void equationMDE(nanovdb::FloatGrid* input_grid_endothelial,nanovdb::FloatGrid* 
             }
         }
         float production_rate = 0.0000015;
+        
         float diffussion_coefficient = 0.0025;
         float degradation_rate = 0.75;
+        //printf("%f %f %f\n",production_rate,diffussion_coefficient,degradation_rate);
         nanovdb::CurvatureStencil<nanovdb::FloatGrid> stencilNano(*input_grid_MDE);
         stencilNano.moveTo(coord);
         float laplacian = stencilNano.laplacian();
@@ -195,9 +211,9 @@ void equationMDE(nanovdb::FloatGrid* input_grid_endothelial,nanovdb::FloatGrid* 
             n_i = 0.0;
         }
         float old_mde = leaf_s->getValue(i);
-        float derivative = n_i * production_rate + diffussion_coefficient * laplacian - degradation_rate * old_mde;
-
-        leaf_s->setValueOnly(i,old_mde + derivative * time_factor);
+        float derivative = n_i * production_rate + diffussion_coefficient * laplacian * old_mde - degradation_rate * old_mde;
+        
+        leaf_d->setValueOnly(i,old_mde + derivative * time_factor);
 
     };
     thrust::counting_iterator<uint64_t, thrust::device_system_tag> iter(0);
