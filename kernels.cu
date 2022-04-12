@@ -11,7 +11,7 @@
 #include "pruebaThrust.h"
 #include <nanovdb/util/Stencils.h>
 
-const float time_factor = 6 ; //Timestep de 6 minutos pasado a segundos
+const float time_factor = 6  ; //Timestep de 6 minutos pasado a segundos
 
 /**
  * @brief Genera la estrucura inicial de las celulas endoteliales, cada cilindro tendra el tamanio de un leaf node (8x8x8)
@@ -211,8 +211,8 @@ void equationMDE(nanovdb::FloatGrid* input_grid_endothelial,nanovdb::FloatGrid* 
             n_i = 0.0;
         }
         float old_mde = leaf_s->getValue(i);
-        float derivative = n_i * production_rate + diffussion_coefficient * laplacian * old_mde - degradation_rate * old_mde;
-        
+        //float derivative = n_i * production_rate + diffussion_coefficient * laplacian * old_mde - degradation_rate * old_mde;
+        float derivative = diffussion_coefficient * laplacian;
         leaf_d->setValueOnly(i,old_mde + derivative * time_factor);
 
     };
@@ -271,6 +271,9 @@ void equationEndothelial(nanovdb::FloatGrid * grid_s,nanovdb::FloatGrid * grid_d
         stencilTAF.moveTo(coord_nano);
         auto gradientTAF = stencilTAF.gradient();
         float factorTAF = gradientTAF[0][0] + gradientTAF[1][1] + gradientTAF[2][2];
+        
+        //printf("%f  %f  %f\n",gradientTAF[0][0],gradientTAF[1][1],gradientTAF[2][2]);
+        
         /*
             Tercera parte, Fibronectin
         */
@@ -280,9 +283,10 @@ void equationEndothelial(nanovdb::FloatGrid * grid_s,nanovdb::FloatGrid * grid_d
         float factorFibronectin = gradientFibronectin[0][0] + gradientFibronectin[1][1] + gradientFibronectin[2][2];
         factorFibronectin = factorFibronectin * 0.28;
         
+        //printf("%f %f\n",factorTAF,factorFibronectin);
 
-
-        float derivative = factorEndothelial - factorTAF - factorFibronectin;
+        //float derivative = factorEndothelial*0 - factorTAF - factorFibronectin;
+        float derivative = factorTAF;
         leaf_d->setValueOnly(coord_nano,old_n  + derivative * time_factor );//6 minutos //* 60 segundos
 
     };

@@ -17,6 +17,7 @@
 #include <string>
 #include <type_traits>
 #include <random>
+#include <algorithm>
 
 enum typePointer{CPU,DEVICE};
 
@@ -244,9 +245,23 @@ class Grid{
                             //accessor_open_2.setValue(coordenadas_open,i*i*i);
                         }else if constexpr(std::is_same<OpenGridType,openvdb::Vec3s>::value){
                             openvdb::Vec3s vec;
-                            vec[0] = dist(e2);
-                            vec[1]  = dist(e2) * 0;
-                            vec[2] = dist(e2) * 0;
+                            //Para probar bien los gradientes
+                            vec[0] = -(i+2*size_lado/3) * (i +size_lado/3) ;//* (i -size_lado/2);
+                            vec[1]  = -(j+2*profundidad_total/3) * (j +profundidad_total/3);// *(j - profundidad_total/2);
+                            vec[2] =  -(k+2*size_lado/3) * (k +size_lado/3);// * (k - size_lado/2);
+
+                            float max_value_abs = 200;
+                            
+                            for(int iVec = 0 ;iVec <3;iVec++){
+                                vec[iVec] = std::min({vec[iVec],max_value_abs});
+                                vec[iVec] = std::max({vec[iVec],-max_value_abs});
+                            }
+                            
+
+
+                            //vec[0]*=vec[0]*0.001;
+                            // vec[1]*=vec[1];
+                            // vec[2]*=vec[2];
                             accessor_open.setValue(coordenadas_open,vec);
                             if(createBoth){
                                 accessor_open_2.setValue(coordenadas_open,vec);

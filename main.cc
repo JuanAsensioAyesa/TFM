@@ -91,11 +91,11 @@ int main(int argc,char * argv[]){
     // openvdb::FloatGrid::Ptr grid_open_2 =
     //    openvdb::FloatGrid::create(/*background value=*/2.0);
     dataSkin dataIniEndothelial;
-    dataIniEndothelial.valueBasale = 0;
-    dataIniEndothelial.valueCorneum = 0;
-    dataIniEndothelial.valueDermis = 0;
-    dataIniEndothelial.valueHipoDermis = 0;
-    dataIniEndothelial.valueSpinosum = 0;
+    dataIniEndothelial.valueBasale = 0.01;
+    dataIniEndothelial.valueCorneum = 0.01;
+    dataIniEndothelial.valueDermis = 0.01;
+    dataIniEndothelial.valueHipoDermis = 0.01;
+    dataIniEndothelial.valueSpinosum = 0.01;
     int size_lado = 250;
     int profundidad_total = 150;
     openvdb::Coord coordenadas;
@@ -115,14 +115,14 @@ int main(int argc,char * argv[]){
     createSkin(accessor_1_endothelial,size_lado,profundidad_total,coordenadas,dataIniEndothelial);
     createSkin(accessor_2_endothelial,size_lado,profundidad_total,coordenadas,dataIniEndothelial);
     
-    createSkin(accessor_1_TAF,size_lado,profundidad_total,coordenadas,dataIniEndothelial);
-    createSkin(accessor_2_TAF,size_lado,profundidad_total,coordenadas,dataIniEndothelial);
+    //createSkin(accessor_1_TAF,size_lado,profundidad_total,coordenadas,dataIniEndothelial);
+    // createSkin(accessor_2_TAF,size_lado,profundidad_total,coordenadas,dataIniEndothelial);
 
-    createSkin(accessor_1_Fibronectin,size_lado,profundidad_total,coordenadas,dataIniEndothelial);
-    createSkin(accessor_2_Fibronectin,size_lado,profundidad_total,coordenadas,dataIniEndothelial);
+    // createSkin(accessor_1_Fibronectin,size_lado,profundidad_total,coordenadas,dataIniEndothelial);
+    // createSkin(accessor_2_Fibronectin,size_lado,profundidad_total,coordenadas,dataIniEndothelial);
 
-    createSkin(accessor_1_MDE,size_lado,profundidad_total,coordenadas,dataIniEndothelial);
-    createSkin(accessor_2_MDE,size_lado,profundidad_total,coordenadas,dataIniEndothelial);
+    // createSkin(accessor_1_MDE,size_lado,profundidad_total,coordenadas,dataIniEndothelial);
+    // createSkin(accessor_2_MDE,size_lado,profundidad_total,coordenadas,dataIniEndothelial);
 
     openvdb::Coord esquina_izquierda = openvdb::Coord();
     esquina_izquierda[0] = -size_lado / 2;
@@ -136,12 +136,17 @@ int main(int argc,char * argv[]){
     openvdb::FloatGrid::Accessor accessorFibronectin2 = gridFibronectin.getAccessorOpen2();
     openvdb::FloatGrid::Accessor accessorTAF1 = gridTAF.getAccessorOpen1();
     openvdb::FloatGrid::Accessor accessorTAF2 = gridTAF.getAccessorOpen2();
-    createRectangle(accessorTAF1,esquina_izquierda,tamanio_tumor,1);
-    createRectangle(accessorTAF2,esquina_izquierda,tamanio_tumor,1);
-    createRectangle(accessorFibronectin1,esquina_izquierda,tamanio_tumor,1);
-    createRectangle(accessorFibronectin2,esquina_izquierda,tamanio_tumor,1);
-
+    // createRectangle(accessorTAF1,esquina_izquierda,tamanio_tumor,1);
+    // createRectangle(accessorTAF2,esquina_izquierda,tamanio_tumor,1);
+    // createRectangle(accessorFibronectin1,esquina_izquierda,tamanio_tumor,1);
+    // createRectangle(accessorFibronectin2,esquina_izquierda,tamanio_tumor,1);
+    // esquina_izquierda[0]-=30;
+    // createRectangle(accessor_1_endothelial,esquina_izquierda,tamanio_tumor,1);
+    // createRectangle(accessor_2_endothelial,esquina_izquierda,tamanio_tumor,1);
+    // createRectangle(accessor_1_MDE,esquina_izquierda,tamanio_tumor,1);
+    // createRectangle(accessor_2_MDE,esquina_izquierda,tamanio_tumor,1);
     //gridMDE.fillRandom();
+    
     
     
     //gridVectorPrueba.fillRandom();
@@ -171,8 +176,8 @@ int main(int argc,char * argv[]){
     nanovdb::FloatGrid* gridWrite_CPU;
     uint64_t nodeCount = gridGradienteFibronectin.getPtrNano1(typePointer::CPU)->tree().nodeCount(0);
     std::cout<<"NodeCount "<<nodeCount<<std::endl;
-    generateEndothelial(gridEndothelial.getPtrNano1(typePointer::DEVICE),nodeCount,-39,-130,2);
-    generateEndothelial(gridEndothelial.getPtrNano2(typePointer::DEVICE),nodeCount,-39,-130,2);
+    //generateEndothelial(gridEndothelial.getPtrNano1(typePointer::DEVICE),nodeCount,-39,-130,10);
+    //generateEndothelial(gridEndothelial.getPtrNano2(typePointer::DEVICE),nodeCount,-39,-130,10);
   
     // generateGradientFibronectin(gridFibronectin.getPtrNano1(typePointer::DEVICE),gridEndothelial.getPtrNano1(typePointer::DEVICE),gridGradienteFibronectin.getPtrNano2(typePointer::DEVICE),nodeCount);
     // generateGradientTAF(gridTAF.getPtrNano1(typePointer::DEVICE),gridEndothelial.getPtrNano1(typePointer::DEVICE),gridGradienteTAF.getPtrNano2(typePointer::DEVICE),nodeCount);
@@ -212,10 +217,10 @@ int main(int argc,char * argv[]){
             gridWriteMDE = gridMDE.getPtrNano1(typePointer::DEVICE);
         }
         //equationMDE(gridRead,gridReadMDE,gridWriteMDE,nodeCount);
-        equationFibronectin(gridRead,gridReadFibronectin,gridReadMDE,gridWriteFibtronectin,nodeCount);
-        equationTAF(gridRead,gridReadTAF,gridWriteTAF,nodeCount);
-        generateGradientFibronectin(gridFibronectin.getPtrNano1(typePointer::DEVICE),gridEndothelial.getPtrNano1(typePointer::DEVICE),gridGradienteFibronectin.getPtrNano1(typePointer::DEVICE),nodeCount);
-        generateGradientTAF(gridTAF.getPtrNano1(typePointer::DEVICE),gridEndothelial.getPtrNano1(typePointer::DEVICE),gridGradienteTAF.getPtrNano1(typePointer::DEVICE),nodeCount);
+        //equationFibronectin(gridRead,gridReadFibronectin,gridReadMDE,gridWriteFibtronectin,nodeCount);
+        //equationTAF(gridRead,gridReadTAF,gridWriteTAF,nodeCount);
+        //generateGradientFibronectin(gridFibronectin.getPtrNano1(typePointer::DEVICE),gridEndothelial.getPtrNano1(typePointer::DEVICE),gridGradienteFibronectin.getPtrNano1(typePointer::DEVICE),nodeCount);
+        //generateGradientTAF(gridTAF.getPtrNano1(typePointer::DEVICE),gridEndothelial.getPtrNano1(typePointer::DEVICE),gridGradienteTAF.getPtrNano1(typePointer::DEVICE),nodeCount);
 
         equationEndothelial(gridRead,gridWrite,gridReadTAF,gridReadFibronectin,gridGradienteTAF.getPtrNano1(typePointer::DEVICE),gridGradienteFibronectin.getPtrNano1(typePointer::DEVICE),nodeCount);
         
