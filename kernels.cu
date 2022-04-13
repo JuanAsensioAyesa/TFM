@@ -199,7 +199,7 @@ void equationMDE(nanovdb::FloatGrid* input_grid_endothelial,nanovdb::FloatGrid* 
         }
         float production_rate = 0.0000015;
         
-        float diffussion_coefficient = 0.0025;
+        float diffussion_coefficient = 0.025;
         float degradation_rate = 0.75;
         //printf("%f %f %f\n",production_rate,diffussion_coefficient,degradation_rate);
         nanovdb::CurvatureStencil<nanovdb::FloatGrid> stencilNano(*input_grid_MDE);
@@ -268,12 +268,14 @@ void equationEndothelial(nanovdb::FloatGrid * grid_s,nanovdb::FloatGrid * grid_d
             Segunda parte, chimiotaxis TAF
         */
         nanovdb::CurvatureStencil<nanovdb::Vec3fGrid> stencilTAF(*gradientTAF);
+        
         stencilTAF.moveTo(coord_nano);
         auto gradientTAF = stencilTAF.gradient();
         float factorTAF = gradientTAF[0][0] + gradientTAF[1][1] + gradientTAF[2][2];
         
         //printf("%f  %f  %f\n",gradientTAF[0][0],gradientTAF[1][1],gradientTAF[2][2]);
         
+        //float factorTAF  = stencilNano.gaussianCurvature() ;
         /*
             Tercera parte, Fibronectin
         */
@@ -287,7 +289,8 @@ void equationEndothelial(nanovdb::FloatGrid * grid_s,nanovdb::FloatGrid * grid_d
 
         //float derivative = factorEndothelial*0 - factorTAF - factorFibronectin;
         float derivative = factorTAF;
-        leaf_d->setValueOnly(coord_nano,old_n  + derivative * time_factor );//6 minutos //* 60 segundos
+        //leaf_d->setValueOnly(coord_nano,old_n  + derivative * time_factor );//6 minutos //* 60 segundos
+        leaf_d->setValueOnly(coord_nano,derivative);//6 minutos //* 60 segundos
 
     };
     thrust::counting_iterator<uint64_t, thrust::device_system_tag> iter(0);
