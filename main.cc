@@ -91,11 +91,11 @@ int main(int argc,char * argv[]){
     // openvdb::FloatGrid::Ptr grid_open_2 =
     //    openvdb::FloatGrid::create(/*background value=*/2.0);
     dataSkin dataIniEndothelial;
-    dataIniEndothelial.valueBasale = 0.01;
-    dataIniEndothelial.valueCorneum = 0.01;
-    dataIniEndothelial.valueDermis = 0.01;
-    dataIniEndothelial.valueHipoDermis = 0.01;
-    dataIniEndothelial.valueSpinosum = 0.01;
+    dataIniEndothelial.valueBasale = 0.0;
+    dataIniEndothelial.valueCorneum = 0.0;
+    dataIniEndothelial.valueDermis = 0.0;
+    dataIniEndothelial.valueHipoDermis = 0.0;
+    dataIniEndothelial.valueSpinosum = 0.0;
     int size_lado = 250;
     int profundidad_total = 150;
     openvdb::Coord coordenadas;

@@ -224,16 +224,29 @@ void pruebaGradiente(nanovdb::Vec3fGrid  *grid_d,nanovdb::FloatGrid* gridSource 
 {
     auto kernel = [grid_d,gridSource] __device__ (const uint64_t n) {
         auto *leaf_d = grid_d->tree().getFirstNode<0>() + (n >> 9);// this only works if grid->isSequential<0>() == true
+        auto *leaf_s = gridSource->tree().getFirstNode<0>() + (n >> 9);
         const int i = n & 511;
         
         auto coord = leaf_d->offsetToGlobalCoord(i);
         const nanovdb::Coord coord_nano = coord;
         //printf("%d %d %d\n",coord[0],coord[1],coord[2]);
         nanovdb::CurvatureStencil<nanovdb::FloatGrid> stencilNano(*gridSource);
-
+        
+        auto accessor = gridSource->tree().getAccessor();
         
         stencilNano.moveTo(coord_nano);
-        leaf_d->setValueOnly(coord,stencilNano.gradient());
+        auto gradiente = stencilNano.gradient();
+        // s
+        // auto suma = gradiente[0]+gradiente[1]+gradiente[2];
+        // if(suma!=0){
+        //     nanovdb::Coord coord_aux = coord;
+        //     coord_aux[0] = 0 ;
+        //     coord_aux[1] = 0 ;
+        //     coord_aux[2] = 0 ;
+        //     //printf("%f %f\n",suma,leaf_s->getValue(coord));
+        //     printf("%f \n",accessor.getValue(coord));
+        // }
+        leaf_d->setValueOnly(coord,gradiente);
         
         
     };
