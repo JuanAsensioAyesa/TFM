@@ -11,7 +11,7 @@
 #include "pruebaThrust.h"
 #include <nanovdb/util/Stencils.h>
 
-const float threshold_vecino = 0.1;
+const float threshold_vecino = 0.25;
 const float time_factor = 6; //Timestep de 6 minutos pasado a segundos
 __device__ const float ini_endothelial = 1;
 
@@ -27,6 +27,7 @@ void generateEndothelial(nanovdb::FloatGrid *grid_d, uint64_t leafCount, int lim
         
         auto coord_indi = leaf_d->offsetToGlobalCoord(i);
         auto coord = leaf_d->origin();
+        coord = coord_indi;
         //printf("%d %d %d\n",coord[0],coord[1],coord[2]);
         if(coord[1]>lim_inf && coord[1]<lim_sup){
             if(coord[0]%modulo == 0 && coord[2]%modulo == 0 ){
@@ -65,20 +66,22 @@ void equationTAF(nanovdb::FloatGrid* input_grid_endothelial,nanovdb::FloatGrid* 
         float n_i = 0;
         bool esVecino = false;
         //Se calcula n_i , que determina si se es vecino de una endothelial
-        for(int i_incremento_x = 0;i_incremento_x<len_incrementos && !esVecino;i_incremento_x++){
-            for(int i_incremento_y = 0 ;i_incremento_y<len_incrementos && !esVecino;i_incremento_y++){
-                for(int i_incremento_z = 0 ;i_incremento_z<len_incrementos && !esVecino;i_incremento_z++){
-                    int incremento_x = incrementos_vecinos[i_incremento_x];
-                    int incremento_y = incrementos_vecinos[i_incremento_y];
-                    int incremento_z = incrementos_vecinos[i_incremento_z];
-
-
-                    if(accessor_endothelial.isActive(coord.offsetBy(incremento_x,incremento_y,incremento_z))){
-                        n_i = accessor_endothelial.getValue(coord.offsetBy(incremento_x,incremento_y,incremento_z));
+        if(accessor_endothelial.getValue(coord)<threshold_vecino){
+            for(int i_incremento_x = 0;i_incremento_x<len_incrementos && !esVecino;i_incremento_x++){
+                for(int i_incremento_y = 0 ;i_incremento_y<len_incrementos && !esVecino;i_incremento_y++){
+                    for(int i_incremento_z = 0 ;i_incremento_z<len_incrementos && !esVecino;i_incremento_z++){
+                        int incremento_x = incrementos_vecinos[i_incremento_x];
+                        int incremento_y = incrementos_vecinos[i_incremento_y];
+                        int incremento_z = incrementos_vecinos[i_incremento_z];
+    
+    
+                        if(accessor_endothelial.isActive(coord.offsetBy(incremento_x,incremento_y,incremento_z))){
+                            n_i = accessor_endothelial.getValue(coord.offsetBy(incremento_x,incremento_y,incremento_z));
+                            
+                        }
+                        esVecino = n_i > threshold_vecino;//Esto igual esta feo
                         
                     }
-                    esVecino = n_i > threshold_vecino;//Esto igual esta feo
-                    
                 }
             }
         }
@@ -130,23 +133,26 @@ void equationFibronectin(nanovdb::FloatGrid* input_grid_endothelial,nanovdb::Flo
         float n_i = 0;
         bool esVecino = false;
         //Se calcula n_i , que determina si se es vecino de una endothelial
-        for(int i_incremento_x = 0;i_incremento_x<len_incrementos && !esVecino;i_incremento_x++){
-            for(int i_incremento_y = 0 ;i_incremento_y<len_incrementos && !esVecino;i_incremento_y++){
-                for(int i_incremento_z = 0 ;i_incremento_z<len_incrementos && !esVecino;i_incremento_z++){
-                    int incremento_x = incrementos_vecinos[i_incremento_x];
-                    int incremento_y = incrementos_vecinos[i_incremento_y];
-                    int incremento_z = incrementos_vecinos[i_incremento_z];
-
-
-                    if(accessor_endothelial.isActive(coord.offsetBy(incremento_x,incremento_y,incremento_z))){
-                        n_i = accessor_endothelial.getValue(coord.offsetBy(incremento_x,incremento_y,incremento_z));
+        if(accessor_endothelial.getValue(coord)<threshold_vecino){
+            for(int i_incremento_x = 0;i_incremento_x<len_incrementos && !esVecino;i_incremento_x++){
+                for(int i_incremento_y = 0 ;i_incremento_y<len_incrementos && !esVecino;i_incremento_y++){
+                    for(int i_incremento_z = 0 ;i_incremento_z<len_incrementos && !esVecino;i_incremento_z++){
+                        int incremento_x = incrementos_vecinos[i_incremento_x];
+                        int incremento_y = incrementos_vecinos[i_incremento_y];
+                        int incremento_z = incrementos_vecinos[i_incremento_z];
+    
+    
+                        if(accessor_endothelial.isActive(coord.offsetBy(incremento_x,incremento_y,incremento_z))){
+                            n_i = accessor_endothelial.getValue(coord.offsetBy(incremento_x,incremento_y,incremento_z));
+                            
+                        }
+                        esVecino = n_i > threshold_vecino;//Esto igual esta feo
                         
                     }
-                    esVecino = n_i > threshold_vecino;//Esto igual esta feo
-                    
                 }
             }
         }
+        
         
         float production_rate = 0.0125;
         float degradation_rate = 0.1;
@@ -192,20 +198,22 @@ void equationMDE(nanovdb::FloatGrid* input_grid_endothelial,nanovdb::FloatGrid* 
         float n_i = 0;
         bool esVecino = false;
         //Se calcula n_i , que determina si se es vecino de una endothelial
-        for(int i_incremento_x = 0;i_incremento_x<len_incrementos && !esVecino;i_incremento_x++){
-            for(int i_incremento_y = 0 ;i_incremento_y<len_incrementos && !esVecino;i_incremento_y++){
-                for(int i_incremento_z = 0 ;i_incremento_z<len_incrementos && !esVecino;i_incremento_z++){
-                    int incremento_x = incrementos_vecinos[i_incremento_x];
-                    int incremento_y = incrementos_vecinos[i_incremento_y];
-                    int incremento_z = incrementos_vecinos[i_incremento_z];
-
-
-                    if(accessor_endothelial.isActive(coord.offsetBy(incremento_x,incremento_y,incremento_z))){
-                        n_i = accessor_endothelial.getValue(coord.offsetBy(incremento_x,incremento_y,incremento_z));
+        if(accessor_endothelial.getValue(coord)<threshold_vecino){
+            for(int i_incremento_x = 0;i_incremento_x<len_incrementos && !esVecino;i_incremento_x++){
+                for(int i_incremento_y = 0 ;i_incremento_y<len_incrementos && !esVecino;i_incremento_y++){
+                    for(int i_incremento_z = 0 ;i_incremento_z<len_incrementos && !esVecino;i_incremento_z++){
+                        int incremento_x = incrementos_vecinos[i_incremento_x];
+                        int incremento_y = incrementos_vecinos[i_incremento_y];
+                        int incremento_z = incrementos_vecinos[i_incremento_z];
+    
+    
+                        if(accessor_endothelial.isActive(coord.offsetBy(incremento_x,incremento_y,incremento_z))){
+                            n_i = accessor_endothelial.getValue(coord.offsetBy(incremento_x,incremento_y,incremento_z));
+                            
+                        }
+                        esVecino = n_i > threshold_vecino;//Esto igual esta feo
                         
                     }
-                    esVecino = n_i > threshold_vecino;//Esto igual esta feo
-                    
                 }
             }
         }
@@ -317,11 +325,17 @@ void equationEndothelial(nanovdb::FloatGrid * grid_s,nanovdb::FloatGrid * grid_d
         
         //printf("%f %f\n",factorTAF,factorFibronectin);
 
-        float derivative = factorEndothelial - factorTAF ;//- factorFibronectin;
+        float derivative = factorEndothelial  - factorTAF - factorFibronectin;
+        if(derivative > 100){
+            printf("%f %f %f\n",factorEndothelial,factorTAF,factorFibronectin);
+        }
         //float derivative = -factorTAF;
         auto new_value = old_n + derivative * time_factor;
         if(new_value < 0 ){
             new_value = 0 ;
+        }
+        if(new_value > 10){
+            new_value = 10;
         }
         leaf_d->setValueOnly(coord_nano,new_value);//6 minutos //* 60 segundos
         //leaf_d->setValueOnly(coord_nano,derivative);//6 minutos //* 60 segundos
@@ -417,6 +431,34 @@ void divergence(nanovdb::Vec3fGrid *grid_s,nanovdb::FloatGrid *grid_d,uint64_t l
         auto divergence = gradient[0][0]+gradient[1][1] + gradient[2][2];
         leaf_d->setValueOnly(coord,divergence);
 
+    };
+    thrust::counting_iterator<uint64_t, thrust::device_system_tag> iter(0);
+    thrust::for_each(iter, iter + 512*leafCount, kernel);
+}
+void laplacian(nanovdb::FloatGrid * grid_s,nanovdb::FloatGrid * grid_d, uint64_t leafCount){
+    auto kernel = [grid_s,grid_d] __device__ (const uint64_t n) {
+        auto *leaf_s = grid_s->tree().getFirstNode<0>() + (n >> 9);// this only works if grid->isSequential<0>() == true
+        auto *leaf_d = grid_d->tree().getFirstNode<0>() + (n >> 9);// this only works if grid->isSequential<0>() == true
+
+        const int i = n & 511;
+        
+        auto coord = leaf_s->offsetToGlobalCoord(i);
+
+        nanovdb::CurvatureStencil<nanovdb::FloatGrid> stencil(*grid_s);
+        const nanovdb::Coord coord_nano = coord;
+        stencil.moveTo(coord_nano);
+        auto old_value = leaf_s->getValue(i);
+        auto laplacian = stencil.laplacian();
+        // if(laplacian!= 0){
+        //     printf("%f\n",laplacian);
+        // }
+        auto new_value = old_value + laplacian*0.06;
+
+        // if(new_value < 0 ){
+        //     new_value = 0;
+        // }
+        
+        leaf_d->setValueOnly(i,new_value);
     };
     thrust::counting_iterator<uint64_t, thrust::device_system_tag> iter(0);
     thrust::for_each(iter, iter + 512*leafCount, kernel);
