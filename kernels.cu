@@ -12,7 +12,7 @@
 #include <nanovdb/util/Stencils.h>
 
 const float threshold_vecino = 0.1;
-const float time_factor = 6  ; //Timestep de 6 minutos pasado a segundos
+const float time_factor = 1; //Timestep de 6 minutos pasado a segundos
 __device__ const float ini_endothelial = 1;
 
 /**
@@ -26,6 +26,7 @@ void generateEndothelial(nanovdb::FloatGrid *grid_d, uint64_t leafCount, int lim
         const int i = n & 511;
         
         auto coord = leaf_d->offsetToGlobalCoord(i);
+        //auto coord = leaf_d->origin();
         //printf("%d %d %d\n",coord[0],coord[1],coord[2]);
         if(coord[1]>lim_inf && coord[1]<lim_sup){
             if(coord[0]%modulo == 0 && coord[2]%modulo == 0 ){
@@ -92,7 +93,7 @@ void equationTAF(nanovdb::FloatGrid* input_grid_endothelial,nanovdb::FloatGrid* 
         float c = leaf_s->getValue(i);
         
         
-        float derivative = -n_c * n_i;// * c;
+        float derivative = -n_c * n_i* c;
         // if(c > 0){
         //     printf("%f %f %f\n",c,n_i,derivative);
         // }
@@ -163,7 +164,7 @@ void equationFibronectin(nanovdb::FloatGrid* input_grid_endothelial,nanovdb::Flo
         //     printf("%f\n",old_f + derivative * time_factor);
         // }
         auto new_value = old_f + derivative*time_factor;
-        if(new_value < 0 ){
+        if(false && new_value < 0 ){
             new_value =  0;
         }
         leaf_d->setValueOnly(i,new_value);

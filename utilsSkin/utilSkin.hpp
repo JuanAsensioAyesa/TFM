@@ -10,6 +10,7 @@
 #include <openvdb/Types.h>
 #include <iostream>
 #include <stdlib.h>     /* atoi */
+#include <cmath>
 
 /**
  * @brief Para pasar los datos a la funcion createSkin 
@@ -134,7 +135,14 @@ void createRectangle(openvdb::FloatGrid::Accessor& accessor,openvdb::Coord esqui
     for(int i = 0;i<size;i++){
         for(int j = 0;j<size;j++){
             for(int k = 0 ;k<size;k++){
+                float distancia_i = std::pow(std::abs(i - size/2.0),2);
+                float distancia_j = std::pow(std::abs(j - size/2.0),2);
+                float distancia_k = std::pow(std::abs(k - size/2.0),2);
+
+                float distancia = std::sqrt(distancia_i+ distancia_j+distancia_k);
+
                 openvdb::Coord new_coords = openvdb::Coord(esquinaIzquierda[0]+i,esquinaIzquierda[1]+j,esquinaIzquierda[2]+k);
+                //std::cout<<(new_value*new_value)/distancia<<std::endl;
                 accessor.setValue(new_coords,new_value);
             }
         }
