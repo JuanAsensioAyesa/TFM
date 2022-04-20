@@ -144,8 +144,8 @@ int main(int argc,char * argv[]){
     openvdb::FloatGrid::Accessor accessorFibronectin2 = gridFibronectin.getAccessorOpen2();
     openvdb::FloatGrid::Accessor accessorTAF1 = gridTAF.getAccessorOpen1();
     openvdb::FloatGrid::Accessor accessorTAF2 = gridTAF.getAccessorOpen2();
-    createRectangle(accessorTAF1,esquina_izquierda,tamanio_tumor,10);
-    createRectangle(accessorTAF2,esquina_izquierda,tamanio_tumor,10);
+    createRectangle(accessorTAF1,esquina_izquierda,tamanio_tumor,1);
+    createRectangle(accessorTAF2,esquina_izquierda,tamanio_tumor,1);
     //createRectangle(accessorFibronectin1,esquina_izquierda,tamanio_tumor,10);
     //createRectangle(accessorFibronectin2,esquina_izquierda,tamanio_tumor,10);
     // esquina_izquierda[0]-=30;
@@ -186,8 +186,8 @@ int main(int argc,char * argv[]){
     nanovdb::FloatGrid* gridWrite_CPU;
     uint64_t nodeCount = gridGradienteFibronectin.getPtrNano1(typePointer::CPU)->tree().nodeCount(0);
     std::cout<<"NodeCount "<<nodeCount<<std::endl;
-    generateEndothelial(gridEndothelial.getPtrNano1(typePointer::DEVICE),nodeCount,-39,-130,5);
-    generateEndothelial(gridEndothelial.getPtrNano2(typePointer::DEVICE),nodeCount,-39,-130,5);
+    generateEndothelial(gridEndothelial.getPtrNano1(typePointer::DEVICE),nodeCount,-39,-130,3);
+    generateEndothelial(gridEndothelial.getPtrNano2(typePointer::DEVICE),nodeCount,-39,-130,3);
   
     //generateGradientFibronectin(gridFibronectin.getPtrNano1(typePointer::DEVICE),gridEndothelial.getPtrNano1(typePointer::DEVICE),gridGradienteFibronectin.getPtrNano2(typePointer::DEVICE),nodeCount);
     //generateGradientTAF(gridTAF.getPtrNano1(typePointer::DEVICE),gridEndothelial.getPtrNano1(typePointer::DEVICE),gridGradienteTAF.getPtrNano2(typePointer::DEVICE),nodeCount);
@@ -238,6 +238,9 @@ int main(int argc,char * argv[]){
         
         //gridFibronectin.download();
         //gridTAF.download();
+        gridEndothelial.download();
+        vector_medias.push_back(computeMean(gridEndothelial.getPtrNano1(typePointer::CPU)));
+        gridEndothelial.upload();
         //vector_medias.push_back(computeMax(gridTAF.getPtrNano1(typePointer::CPU)));
         //gridTAF.upload();
         //vector_medias.push_back(computeMean(gridFibronectin.getPtrNano1(typePointer::CPU)));
@@ -248,7 +251,7 @@ int main(int argc,char * argv[]){
 
     }
     
-    divergence(gridGradienteFibronectin.getPtrNano1(typePointer::DEVICE),gridDivergenciaEndothelial.getPtrNano1(typePointer::DEVICE),nodeCount);
+    divergence(gridGradienteTAF.getPtrNano1(typePointer::DEVICE),gridDivergenciaEndothelial.getPtrNano1(typePointer::DEVICE),nodeCount);
 
     // }
     //pruebaGradiente(gridVectorPrueba.getPtrNanoWrite(typePointer::DEVICE),gridEndothelial.getPtrNanoRead(typePointer::DEVICE),gridEndothelial.getPtrNanoRead(typePointer::CPU)->tree().nodeCount(0));
