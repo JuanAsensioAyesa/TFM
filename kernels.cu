@@ -475,7 +475,7 @@ void laplacian(nanovdb::FloatGrid * grid_s,nanovdb::FloatGrid * grid_d, uint64_t
         // if(laplacian!= 0){
         //     printf("%f\n",laplacian);
         // }
-        auto new_value = old_value + laplacian*0.6;
+        auto new_value = old_value + laplacian*0.06;
 
         // if(new_value < 0 ){
         //     new_value = 0;
