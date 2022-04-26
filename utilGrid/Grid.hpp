@@ -232,7 +232,7 @@ class Grid{
             // Engines 
             //
             std::mt19937 e2(rd());
-            std::uniform_real_distribution<> dist(0, 10);
+            std::uniform_real_distribution<> dist(0, 1);
             auto accessor_open = gridOpen_1_ptr->getAccessor();
             auto accessor_open_2 = gridOpen_1_ptr->getAccessor();
             if(createBoth){
@@ -244,14 +244,14 @@ class Grid{
                     for(int k = 0 ;k>-size_lado;k--){
                         openvdb::Coord coordenadas_open = openvdb::Coord(i,j,k);
                         if constexpr(std::is_same<OpenGridType,float>::value){
-                            // accessor_open.setValue(coordenadas_open,dist(e2));
-                            // if(createBoth){
-                            //     accessor_open_2.setValue(coordenadas_open,dist(e2));
-                            // }
-                            accessor_open.setValue(coordenadas_open,0.1);
+                            accessor_open.setValue(coordenadas_open,dist(e2));
                             if(createBoth){
-                                accessor_open_2.setValue(coordenadas_open,0.1);
+                                accessor_open_2.setValue(coordenadas_open,dist(e2));
                             }
+                            // accessor_open.setValue(coordenadas_open,0.1);
+                            // if(createBoth){
+                            //     accessor_open_2.setValue(coordenadas_open,0.1);
+                            // }
 
                             //accessor_open.setValue(coordenadas_open,i*i*i);
                             //accessor_open_2.setValue(coordenadas_open,i*i*i);

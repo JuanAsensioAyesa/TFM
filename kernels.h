@@ -16,4 +16,5 @@ void generateGradientFibronectin(nanovdb::FloatGrid * gridFibronectin,nanovdb::F
 void divergence(nanovdb::Vec3fGrid *grid_s,nanovdb::FloatGrid *grid_d,uint64_t leafCount);
 void laplacian(nanovdb::FloatGrid * grid_s,nanovdb::FloatGrid * grid_d, uint64_t leafCount);
 void product(nanovdb::FloatGrid * gridTAF,nanovdb::FloatGrid * gridEndothelial,nanovdb::FloatGrid *grid_d, uint64_t leafCount);
+void cleanEndothelial(nanovdb::FloatGrid * gridEndothelial,uint64_t leafCount);
 #endif

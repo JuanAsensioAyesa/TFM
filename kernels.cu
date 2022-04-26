@@ -11,9 +11,9 @@
 #include "pruebaThrust.h"
 #include <nanovdb/util/Stencils.h>
 
-const float threshold_vecino = 0.25;
+const float threshold_vecino = 0.0;
 const float time_factor = 6*60; //Timestep de 6 minutos pasado a segundos
-__device__ const float ini_endothelial = 1;
+__device__ const float ini_endothelial = 0.6;
 
 /**
  * @brief Genera la estrucura inicial de las celulas endoteliales, cada cilindro tendra el tamanio de un leaf node (8x8x8)
@@ -105,6 +105,9 @@ void equationTAF(nanovdb::FloatGrid* input_grid_endothelial,nanovdb::FloatGrid* 
         if(new_value < 0 ){
             new_value = 0 ;
         }
+        if(new_value >1 ){
+            new_value = 1;
+        }
         leaf_d->setValueOnly(i,new_value);
         
 
@@ -173,6 +176,9 @@ void equationFibronectin(nanovdb::FloatGrid* input_grid_endothelial,nanovdb::Flo
         if(new_value < 0 ){
             new_value =  0;
         }
+        if(new_value > 1){
+            new_value = 1;
+        }
         leaf_d->setValueOnly(i,new_value);
         //leaf_d->setValueOnly(i,n_i);
 
@@ -232,9 +238,9 @@ void equationMDE(nanovdb::FloatGrid* input_grid_endothelial,nanovdb::FloatGrid* 
         }
         float old_mde = leaf_s->getValue(i);
         float derivative = n_i * production_rate + diffussion_coefficient * laplacian * old_mde - degradation_rate * old_mde;
-        float factor_1 = n_i * production_rate;
-        float factor_2 = diffussion_coefficient * laplacian * old_mde;
-        float factor_3 = degradation_rate * old_mde;
+        // float factor_1 = n_i * production_rate;
+        // float factor_2 = diffussion_coefficient * laplacian * old_mde;
+        // float factor_3 = degradation_rate * old_mde;
         // if(laplacian!=0){
         //     printf("%f\n",laplacian);
         // }
@@ -250,6 +256,9 @@ void equationMDE(nanovdb::FloatGrid* input_grid_endothelial,nanovdb::FloatGrid* 
         auto new_value = old_mde + derivative * time_factor;
         if(new_value < 0 ){
             new_value = 0;
+        }
+        if(new_value >1 ){
+            new_value = 1;
         }
         leaf_d->setValueOnly(i,new_value);
         //leaf_d->setValueOnly(i,n_i);
@@ -339,7 +348,7 @@ void equationEndothelial(nanovdb::FloatGrid * grid_s,nanovdb::FloatGrid * grid_d
         
         //printf("%f %f\n",factorTAF,factorFibronectin);
 
-        float derivative = factorEndothelial  - factorTAF ;//- factorFibronectin;
+        float derivative = factorEndothelial  - factorTAF - factorFibronectin;
         // if(derivative > 100){
         //     printf("%f %f %f\n",factorEndothelial,factorTAF,factorFibronectin);
         // }
@@ -466,7 +475,7 @@ void laplacian(nanovdb::FloatGrid * grid_s,nanovdb::FloatGrid * grid_d, uint64_t
         // if(laplacian!= 0){
         //     printf("%f\n",laplacian);
         // }
-        auto new_value = old_value + laplacian*0.06;
+        auto new_value = old_value + laplacian*0.6;
 
         // if(new_value < 0 ){
         //     new_value = 0;
@@ -492,6 +501,29 @@ void product(nanovdb::FloatGrid * gridTAF,nanovdb::FloatGrid * gridEndothelial,n
 
         leaf_d->setValueOnly(i,new_value);
 
+    };
+    thrust::counting_iterator<uint64_t, thrust::device_system_tag> iter(0);
+    thrust::for_each(iter, iter + 512*leafCount, kernel);
+}
+
+void cleanEndothelial(nanovdb::FloatGrid * gridEndothelial,uint64_t leafCount){
+    auto kernel = [gridEndothelial] __device__ (const uint64_t n) {
+        auto *leaf_Endothelial = gridEndothelial->tree().getFirstNode<0>() + (n >> 9);// this only works if grid->isSequential<0>() == true
+
+        const int i = n & 511;
+
+        auto coord = leaf_Endothelial->offsetToGlobalCoord(i);
+        // if(coord[1]<-149){
+        //     printf("%d\n",coord[1]);
+        // }
+        if(coord[0] == -250 || coord[1] == -150 || coord[2] == -250){
+            leaf_Endothelial->setValueOnly(i,0);
+            //printf("Uese\n");
+        }
+        if(coord[0] == 0 || coord[1] == 0 || coord[2] == 0){
+            leaf_Endothelial->setValueOnly(i,0);
+            //printf("Uese\n");
+        }
     };
     thrust::counting_iterator<uint64_t, thrust::device_system_tag> iter(0);
     thrust::for_each(iter, iter + 512*leafCount, kernel);
