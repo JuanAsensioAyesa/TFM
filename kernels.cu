@@ -10,10 +10,14 @@
 #include <nanovdb/util/CudaDeviceBuffer.h>
 #include "pruebaThrust.h"
 #include <nanovdb/util/Stencils.h>
+#include <thrust/random/uniform_real_distribution.h>
+#include <thrust/random/linear_congruential_engine.h>
+#include <thrust/device_vector.h>
+#include <thrust/random.h>
 
-const float threshold_vecino = 0.0;
-const float time_factor = 6*60; //Timestep de 6 minutos pasado a segundos
-__device__ const float ini_endothelial = 0.6;
+const float threshold_vecino = 0;
+const float time_factor = 6; //Timestep de 6 minutos pasado a segundos
+__device__ const float ini_endothelial = 1.0;
 
 /**
  * @brief Genera la estrucura inicial de las celulas endoteliales, cada cilindro tendra el tamanio de un leaf node (8x8x8)
@@ -27,7 +31,7 @@ void generateEndothelial(nanovdb::FloatGrid *grid_d, uint64_t leafCount, int lim
         
         auto coord_indi = leaf_d->offsetToGlobalCoord(i);
         auto coord = leaf_d->origin();
-        //coord = coord_indi;
+        coord = coord_indi;
         //printf("%d %d %d\n",coord[0],coord[1],coord[2]);
         if(coord[1]>lim_inf && coord[1]<lim_sup){
             if(coord[0]%modulo == 0 && coord[2]%modulo == 0 ){
@@ -363,6 +367,100 @@ void equationEndothelial(nanovdb::FloatGrid * grid_s,nanovdb::FloatGrid * grid_d
         leaf_d->setValueOnly(coord_nano,new_value);//6 minutos //* 60 segundos
         //leaf_d->setValueOnly(coord_nano,derivative);//6 minutos //* 60 segundos
 
+    };
+    thrust::counting_iterator<uint64_t, thrust::device_system_tag> iter(0);
+    thrust::for_each(iter, iter + 512*leafCount, kernel);
+}
+__device__ float computeEndothelial(nanovdb::Coord coord_nano,nanovdb::CurvatureStencil<nanovdb::FloatGrid>& stencilEndothelial,nanovdb::CurvatureStencil<nanovdb::Vec3fGrid> &stencilTAF,nanovdb::CurvatureStencil<nanovdb::Vec3fGrid>& stencilFibronectin){
+    /*
+    Primera parte: Difusion aleatoria
+    */
+    
+    stencilEndothelial.moveTo(coord_nano);
+    //float old_n = leaf_s->getValue(coord_nano);
+    float laplacian = stencilEndothelial.laplacian();
+    //printf("%f\n",laplacian);
+    float factorEndothelial = laplacian * 0.0003 ;
+
+    /*
+    Segunda parte, chimiotaxis TAF
+    */
+    
+    
+    stencilTAF.moveTo(coord_nano);
+    auto gradientTAF = stencilTAF.gradient();
+    float factorTAF = gradientTAF[0][0] + gradientTAF[1][1] + gradientTAF[2][2];
+    /*
+    Tercera parte, Fibronectin
+    */
+    
+    stencilFibronectin.moveTo(coord_nano);
+    auto gradientFibronectin = stencilFibronectin.gradient();
+    float factorFibronectin = gradientFibronectin[0][0] + gradientFibronectin[1][1] + gradientFibronectin[2][2];
+    factorFibronectin = factorFibronectin * 0.28;
+    
+    //printf("%f %f\n",factorTAF,factorFibronectin);
+
+    float derivative = factorEndothelial  - factorTAF - factorFibronectin;
+    return derivative;
+}
+
+void equationEndothelialDiscrete(nanovdb::FloatGrid * grid_s,nanovdb::FloatGrid * grid_d,nanovdb::FloatGrid* gridTAF,nanovdb::FloatGrid* gridFibronectin,nanovdb::Vec3fGrid* gradientTAF,nanovdb::Vec3fGrid* gradientFibronectin,nanovdb::FloatGrid * gridTip,int seed,uint64_t leafCount){
+    thrust::minstd_rand rng;
+    auto kernel = [grid_s,grid_d,gridTAF,gridFibronectin,gradientTAF,gradientFibronectin,gridTip,rng,seed] __device__ (const uint64_t n) {
+        auto *leaf_d = grid_d->tree().getFirstNode<0>() + (n >> 9);// this only works if grid->isSequential<0>() == true
+        auto *leaf_s = grid_s->tree().getFirstNode<0>() + (n >> 9);// this only works if grid->isSequential<0>() == true
+        auto *leaf_tip = gridTip->tree().getFirstNode<0>()+(n>>9);
+        const int i = n & 511;
+        auto coord = leaf_tip->offsetToGlobalCoord(i);
+        if(leaf_tip->getValue(i)>0){
+            //Es un tip, se comprueba donde va a migrar 
+            // create a uniform_real_distribution to produce floats from [-7,13)
+            thrust::default_random_engine randEng;
+            thrust::uniform_real_distribution<float> uniDist;
+            int discard = seed*i;
+            randEng.discard(discard);
+            
+            
+            float value = uniDist(randEng);
+
+            int desplazamientos[] = {-1,1};
+            int len_desp = 2;
+            
+            int desplazamiento_max[3];
+            nanovdb::CurvatureStencil<nanovdb::FloatGrid> stencilEndothelial(*grid_s);
+            nanovdb::CurvatureStencil<nanovdb::Vec3fGrid> stencilTAF(*gradientTAF);
+            nanovdb::CurvatureStencil<nanovdb::Vec3fGrid> stencilFibronectin(*gradientFibronectin);
+            
+            nanovdb::Coord coord_max = coord;
+            float max_derivative = computeEndothelial(coord,stencilEndothelial,stencilTAF,stencilFibronectin);
+
+            //Se calcula el maximo
+            for(int dimension = 0 ;dimension <3;dimension++){
+
+                for(int desplazamiento = 0;desplazamiento<len_desp,desplazamiento++){
+                    nanovdb::Coord new_coord = coord;
+                    new_coord[dimension] += desplazamientos[desplazamiento];
+                    float value_i = computeEndothelial(new_coord,stencilEndothelial,stencilTAF,stencilFibronectin);
+                    if(value_i > max_derivative){
+                        max_derivative = value_i;
+                        coord_max = new_coord;
+                    }
+                }
+            }
+            //Se migra
+            leaf_d->setValueOnly(coord_max,1.0);
+            leaf_tip->setValueOnly(coord_max,1.0);
+            //En funcion de la probabilidad se hace branch o no;
+            
+            //printf("%f\n",value);
+            leaf_tip->setValueOnly(coord,value);
+        }
+        
+        
+        //leaf_d->setValueOnly(i,0.0);
+        
+        
     };
     thrust::counting_iterator<uint64_t, thrust::device_system_tag> iter(0);
     thrust::for_each(iter, iter + 512*leafCount, kernel);

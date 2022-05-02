@@ -279,6 +279,11 @@ class Grid{
                                 accessor_open_2.setValue(coordenadas_open,vec);
                             }
                             
+                        }else if constexpr(std::is_same<OpenGridType,bool>::value){
+                            accessor_open.setValue(coordenadas_open,true);
+                            if(createBoth){
+                                accessor_open_2.setValue(coordenadas_open,false);
+                            }
                         }
                     }
                     

@@ -21,6 +21,8 @@
 #include <nanovdb/util/Stencils.h>
 #include <vector>
 #include <fstream>
+#include <cctype>
+#include <random>
 
 
 float computeMeam(nanovdb::FloatGrid * grid){
@@ -88,7 +90,8 @@ int main(int argc,char * argv[]){
     Grid<Vec3,nanovdb::Vec3f,Vec3Open,Vec3Open::Ptr,Vec3Nano> gridGradienteTAF(250,150,ini,false);
     Grid<Vec3,nanovdb::Vec3f,Vec3Open,Vec3Open::Ptr,Vec3Nano> gridGradienteFibronectin(250,150,ini,false);
     Grid<Vec3,nanovdb::Vec3f,Vec3Open,Vec3Open::Ptr,Vec3Nano> gridGradienteEndothelial(250,150,ini,false);
-
+    //Grid<bool,bool,openvdb::BoolGrid,openvdb::BoolGrid::Ptr,nanovdb::BoolGrid> gridTipEndothelial(250,150,false,false);
+    Grid<> gridTipEndothelial(250,150,0.0,false);
     /**
      * Creamos la piel con los datos pertinentes
      * 
@@ -134,7 +137,7 @@ int main(int argc,char * argv[]){
     createSkin(accessor_2_MDE,size_lado,profundidad_total,coordenadas,dataIniEndothelial);
 
     createSkin(accessor_1_Divergencia,size_lado,profundidad_total,coordenadas,dataIniEndothelial);
-
+    gridTipEndothelial.fillRandom();
     openvdb::Coord esquina_izquierda = openvdb::Coord();
     esquina_izquierda[0] = -size_lado / 2;
     esquina_izquierda[1] = -profundidad_total/2-20;
@@ -177,6 +180,7 @@ int main(int argc,char * argv[]){
     gridDivergenciaTAF.upload();
     gridDivergenciaFibronectin.upload();
     gridTAFEndothelial.upload();
+    gridTipEndothelial.upload();
     // int n;
     // std::cin>>n;
     //gridVectorPrueba.upload();
@@ -195,6 +199,10 @@ int main(int argc,char * argv[]){
     nanovdb::FloatGrid* gridWriteFibtronectin;
     nanovdb::FloatGrid* gridRead_CPU;
     nanovdb::FloatGrid* gridWrite_CPU;
+    int n = 1000;
+
+    // auto var = gridWrite_CPU->tree().getFirstNode<0>() + (n >> 9);
+    // var->CoordToOffset
     uint64_t nodeCount = gridGradienteFibronectin.getPtrNano1(typePointer::CPU)->tree().nodeCount(0);
     std::cout<<"NodeCount "<<nodeCount<<std::endl;
     generateEndothelial(gridEndothelial.getPtrNano1(typePointer::DEVICE),nodeCount,-39,-130,3);
@@ -224,6 +232,14 @@ int main(int argc,char * argv[]){
     auto vector_medias_MDE = std::vector<float>();
     auto vector_medias_diver_TAF = std::vector<float>();
     auto vector_medias_diver_Fibronectin = std::vector<float>();
+
+    using u32    = uint_least32_t; 
+    using engine = std::mt19937;
+    std::random_device os_seed;
+    u32 seed = os_seed();
+
+    engine generator( seed );
+    std::uniform_int_distribution< u32 > distribute( 1, nodeCount);
     for(int i = 0 ;i<veces;i++){
         std::cout<<i<<std::endl;
         if(i % 2 == 0 ){
@@ -266,7 +282,10 @@ int main(int argc,char * argv[]){
         cleanEndothelial(gridWrite,nodeCount);
         divergence(gridGradienteTAF.getPtrNano1(typePointer::DEVICE),gridDivergenciaTAF.getPtrNano1(typePointer::DEVICE),nodeCount);
         divergence(gridGradienteFibronectin.getPtrNano1(typePointer::DEVICE),gridDivergenciaFibronectin.getPtrNano1(typePointer::DEVICE),nodeCount);
+        equationEndothelialDiscrete(gridRead,gridWrite,gridReadTAF,gridReadFibronectin,gridGradienteTAF.getPtrNano1(typePointer::DEVICE),gridGradienteFibronectin.getPtrNano1(typePointer::DEVICE),gridTipEndothelial.getPtrNano1(typePointer::DEVICE),distribute( generator ),nodeCount);
+        seed = os_seed();
 
+        engine generator( seed );
         //gridFibronectin.download();
         // gridTAF.download();
         // gridEndothelial.download();
@@ -325,6 +344,8 @@ int main(int argc,char * argv[]){
     gridDivergenciaTAF.download();
     gridDivergenciaFibronectin.download();
     gridTAFEndothelial.download();
+    gridTipEndothelial.download();
+    gridTipEndothelial.copyNanoToOpen();
     gridTAF.copyNanoToOpen();
     gridGradienteEndothelial.copyNanoToOpen();
     gridGradienteFibronectin.copyNanoToOpen();
@@ -348,6 +369,7 @@ int main(int argc,char * argv[]){
     gridDivergenciaTAF.writeToFile("../grids/TAFDivergence.vdb");
     gridDivergenciaFibronectin.writeToFile("../grids/FibronectinDivergence.vdb");
     gridTAFEndothelial.writeToFile("../grids/TAFEndothelial.vdb");
+    gridTipEndothelial.writeToFile("../grids/TipEndothelial.vdb");
 
     return 0;
 
