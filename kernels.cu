@@ -404,30 +404,62 @@ __device__ float computeEndothelial(nanovdb::Coord coord_nano,nanovdb::Curvature
     float derivative = factorEndothelial  - factorTAF - factorFibronectin;
     return derivative;
 }
+__device__ bool  isNextToEndothelial(nanovdb::Coord coord,nanovdb::FloatGrid * input_grid_endothelial){
+    auto accessor_endothelial = input_grid_endothelial->tree().getAccessor();
+    int incrementos_vecinos[] = {-1,0,1};
+    int len_incrementos = 3;
+    float n_i = 0;
+    bool esVecino = false;
+    //Se calcula n_i , que determina si se es vecino de una endothelial
+    //if(accessor_endothelial.getValue(coord)<threshold_vecino){
+        for(int i_incremento_x = 0;i_incremento_x<len_incrementos && !esVecino;i_incremento_x++){
+            for(int i_incremento_y = 0 ;i_incremento_y<len_incrementos && !esVecino;i_incremento_y++){
+                for(int i_incremento_z = 0 ;i_incremento_z<len_incrementos && !esVecino;i_incremento_z++){
+                    int incremento_x = incrementos_vecinos[i_incremento_x];
+                    int incremento_y = incrementos_vecinos[i_incremento_y];
+                    int incremento_z = incrementos_vecinos[i_incremento_z];
 
+
+                    if(accessor_endothelial.isActive(coord.offsetBy(incremento_x,incremento_y,incremento_z))){
+                        n_i = accessor_endothelial.getValue(coord.offsetBy(incremento_x,incremento_y,incremento_z));
+                        
+                    }
+                    esVecino = n_i > threshold_vecino;//Esto igual esta feo
+                    
+                }
+            }
+        }
+    return esVecino;
+}
 void equationEndothelialDiscrete(nanovdb::FloatGrid * grid_s,nanovdb::FloatGrid * grid_d,nanovdb::FloatGrid* gridTAF,nanovdb::FloatGrid* gridFibronectin,nanovdb::Vec3fGrid* gradientTAF,nanovdb::Vec3fGrid* gradientFibronectin,nanovdb::FloatGrid * gridTip,int seed,uint64_t leafCount){
     thrust::minstd_rand rng;
     auto kernel = [grid_s,grid_d,gridTAF,gridFibronectin,gradientTAF,gradientFibronectin,gridTip,rng,seed] __device__ (const uint64_t n) {
         auto *leaf_d = grid_d->tree().getFirstNode<0>() + (n >> 9);// this only works if grid->isSequential<0>() == true
         auto *leaf_s = grid_s->tree().getFirstNode<0>() + (n >> 9);// this only works if grid->isSequential<0>() == true
         auto *leaf_tip = gridTip->tree().getFirstNode<0>()+(n>>9);
+        auto *leaf_TAF = gridTAF->tree().getFirstNode<0>() + (n >> 9);
         const int i = n & 511;
         auto coord = leaf_tip->offsetToGlobalCoord(i);
+        float vector_probabilidades[] = {0.04,0.06,0.08,0.2};
+        float taf_value = leaf_TAF->getValue(coord);
+
+        thrust::default_random_engine randEng;
+        thrust::uniform_real_distribution<float> uniDist;
+        int discard = seed*i;
+        randEng.discard(discard);
+        float random = uniDist(randEng);
         if(leaf_tip->getValue(i)>0){
             //Es un tip, se comprueba donde va a migrar 
             // create a uniform_real_distribution to produce floats from [-7,13)
-            thrust::default_random_engine randEng;
-            thrust::uniform_real_distribution<float> uniDist;
-            int discard = seed*i;
-            randEng.discard(discard);
             
             
-            float value = uniDist(randEng);
+            
+            
 
             int desplazamientos[] = {-1,1};
             int len_desp = 2;
             
-            int desplazamiento_max[3];
+            //int desplazamiento_max[3];
             nanovdb::CurvatureStencil<nanovdb::FloatGrid> stencilEndothelial(*grid_s);
             nanovdb::CurvatureStencil<nanovdb::Vec3fGrid> stencilTAF(*gradientTAF);
             nanovdb::CurvatureStencil<nanovdb::Vec3fGrid> stencilFibronectin(*gradientFibronectin);
@@ -438,7 +470,7 @@ void equationEndothelialDiscrete(nanovdb::FloatGrid * grid_s,nanovdb::FloatGrid 
             //Se calcula el maximo
             for(int dimension = 0 ;dimension <3;dimension++){
 
-                for(int desplazamiento = 0;desplazamiento<len_desp,desplazamiento++){
+                for(int desplazamiento = 0;desplazamiento<len_desp;desplazamiento++){
                     nanovdb::Coord new_coord = coord;
                     new_coord[dimension] += desplazamientos[desplazamiento];
                     float value_i = computeEndothelial(new_coord,stencilEndothelial,stencilTAF,stencilFibronectin);
@@ -452,9 +484,43 @@ void equationEndothelialDiscrete(nanovdb::FloatGrid * grid_s,nanovdb::FloatGrid 
             leaf_d->setValueOnly(coord_max,1.0);
             leaf_tip->setValueOnly(coord_max,1.0);
             //En funcion de la probabilidad se hace branch o no;
+            float taf_new = leaf_TAF->getValue(coord_max);
+            //Si el valor de TAF en la nueva direccion es alto , hay posibilidad de que 
+            //la vena se divida en 2
+            
+            if(taf_new >= 0.8 && random >= 1-vector_probabilidades[3]){
+                
+            }else if(taf_new >=0.7 && random >= 1-vector_probabilidades[2] ){
+
+            }else if(taf_new >= 0.5&& random >= 1-vector_probabilidades[1]){
+
+            }else if(taf_new >=0.3&& random >= 1-vector_probabilidades[0]){
+
+            }else{
+                //NO hay branch
+                leaf_tip->setValueOnly(coord,0.0);
+            }
             
             //printf("%f\n",value);
-            leaf_tip->setValueOnly(coord,value);
+            
+        }else if(isNextToEndothelial(coord,grid_s)){
+            
+            if(taf_value >= 0.8 && random >= 1.0-vector_probabilidades[3]){
+                printf("NEW TIP\n");
+                leaf_tip->setValueOnly(coord,1.0);
+            }else if(taf_value >=0.7 && random >= 1-vector_probabilidades[2] ){
+                printf("NEW TIP\n");
+                leaf_tip->setValueOnly(coord,1.0);
+            }else if(taf_value >= 0.5&& random >= 1-vector_probabilidades[1]){
+                printf("NEW TIP\n");
+                leaf_tip->setValueOnly(coord,1.0);
+            }else if(taf_value >=0.3&& random >= 1-vector_probabilidades[0]){
+                printf("NEW TIP\n");
+                leaf_tip->setValueOnly(coord,1.0);
+            }else{
+                //NO hay branch
+                //leaf_tip->setValueOnly(coord,0.0);
+            }
         }
         
         
