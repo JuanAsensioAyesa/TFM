@@ -506,16 +506,16 @@ void equationEndothelialDiscrete(nanovdb::FloatGrid * grid_s,nanovdb::FloatGrid 
         }else if(isNextToEndothelial(coord,grid_s)){
             
             if(taf_value >= 0.8 && random >= 1.0-vector_probabilidades[3]){
-                printf("NEW TIP\n");
+                //printf("NEW TIP\n");
                 leaf_tip->setValueOnly(coord,1.0);
             }else if(taf_value >=0.7 && random >= 1-vector_probabilidades[2] ){
-                printf("NEW TIP\n");
+                //printf("NEW TIP\n");
                 leaf_tip->setValueOnly(coord,1.0);
             }else if(taf_value >= 0.5&& random >= 1-vector_probabilidades[1]){
-                printf("NEW TIP\n");
+                //printf("NEW TIP\n");
                 leaf_tip->setValueOnly(coord,1.0);
             }else if(taf_value >=0.3&& random >= 1-vector_probabilidades[0]){
-                printf("NEW TIP\n");
+                //printf("NEW TIP\n");
                 leaf_tip->setValueOnly(coord,1.0);
             }else{
                 //NO hay branch
