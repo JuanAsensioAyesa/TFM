@@ -460,8 +460,8 @@ __device__ bool isNextToEndothelialDiscrete(nanovdb::Coord coord,nanovdb::FloatG
     }
     return esVecino;
 }
-__device__ int getPosition(nanovdb::Coord coord_self,nanovdb::FloatGrid * discreteEndothelial){
-    auto accessor = discreteEndothelial->tree().getAccessor();
+__device__ int getPosition(nanovdb::Coord coord_self,nanovdb::FloatGrid * endothelialTip){
+    auto accessor = endothelialTip->tree().getAccessor();
     nanovdb::Coord coord_i = coord_self;
 
     coord_i[1] = coord_i[1] +1; //Comprobamos arriba;
@@ -503,9 +503,10 @@ __device__ int getPosition(nanovdb::Coord coord_self,nanovdb::FloatGrid * discre
 
 }
 
-__device__ bool isMax(nanovdb::Coord coord_self,nanovdb::FloatGrid * discreteEndothelial,nanovdb::FloatGrid * endothelial){
+__device__ bool isMax(nanovdb::Coord coord_self,nanovdb::FloatGrid * endothelialTip,nanovdb::FloatGrid * endothelial,nanovdb::FloatGrid* endothelialDiscrete){
     auto accessor_endothelial = endothelial->tree().getAccessor();
-    int positionSelf = getPosition(coord_self,discreteEndothelial);
+    auto accessor_discrete = endothelialDiscrete->tree().getAccessor();
+    int positionSelf = getPosition(coord_self,endothelialTip);
     nanovdb::Coord coord_endothelial = coord_self;
     switch(positionSelf){
         case 1:
@@ -542,7 +543,7 @@ __device__ bool isMax(nanovdb::Coord coord_self,nanovdb::FloatGrid * discreteEnd
                 nanovdb::Coord new_coord = coord_endothelial;
                 new_coord[dimension] += desplazamientos[desplazamiento];
                 float value_i = accessor_endothelial.getValue(new_coord);
-                if(value_i > value_max){
+                if(accessor_discrete.getValue(new_coord) == 0 && value_i > value_max){
                     value_max = value_i;
                     coord_max = new_coord;
                 }
@@ -554,11 +555,11 @@ __device__ bool isMax(nanovdb::Coord coord_self,nanovdb::FloatGrid * discreteEnd
 
 }
 
-void equationEndothelialDiscrete(nanovdb::FloatGrid * grid_s,nanovdb::FloatGrid * grid_d,nanovdb::FloatGrid* gridTAF,nanovdb::FloatGrid* gridFibronectin,nanovdb::Vec3fGrid* gradientTAF,nanovdb::Vec3fGrid* gradientFibronectin,nanovdb::FloatGrid * gridTip,int seed,uint64_t leafCount){
+void equationEndothelialDiscrete(nanovdb::FloatGrid * grid_source_discrete,nanovdb::FloatGrid * grid_destiny_discrete,nanovdb::FloatGrid* gridDerivativeEndothelial,nanovdb::FloatGrid* gridTAF,nanovdb::FloatGrid * gridTip,int seed,uint64_t leafCount){
     thrust::minstd_rand rng;
-    auto kernel = [grid_s,grid_d,gridTAF,gridFibronectin,gradientTAF,gradientFibronectin,gridTip,rng,seed] __device__ (const uint64_t n) {
-        auto *leaf_d = grid_d->tree().getFirstNode<0>() + (n >> 9);// this only works if grid->isSequential<0>() == true
-        auto *leaf_s = grid_s->tree().getFirstNode<0>() + (n >> 9);// this only works if grid->isSequential<0>() == true
+    auto kernel = [grid_source_discrete,grid_destiny_discrete,gridDerivativeEndothelial,gridTAF,gridTip,rng,seed] __device__ (const uint64_t n) {
+        auto *leaf_d = grid_destiny_discrete->tree().getFirstNode<0>() + (n >> 9);// this only works if grid->isSequential<0>() == true
+        auto *leaf_s = grid_source_discrete->tree().getFirstNode<0>() + (n >> 9);// this only works if grid->isSequential<0>() == true
         auto *leaf_tip = gridTip->tree().getFirstNode<0>()+(n>>9);
         auto *leaf_TAF = gridTAF->tree().getFirstNode<0>() + (n >> 9);
         const int i = n & 511;
@@ -574,81 +575,30 @@ void equationEndothelialDiscrete(nanovdb::FloatGrid * grid_s,nanovdb::FloatGrid 
         float random = uniDist(randEng);
 
 
-        auto accessor_endothelial = grid_s->tree().getAccessor();
+       
 
-        nanovdb::Coord coord_dummy;
-        coord_dummy[0] = 0 ;
-        coord_dummy[1] =0 ;
-        coord_dummy[2] = 0 ;
-        leaf_d->setValueOnly(coord_dummy,100);
+        // nanovdb::Coord coord_dummy;
+        // coord_dummy[0] = 0 ;
+        // coord_dummy[1] =0 ;
+        // coord_dummy[2] = 0 ;
+        //leaf_d->setValueOnly(coord_dummy,100);
 
        // static int first = true;
-        if(false&&leaf_tip->getValue(i)>0){
-            //Es un tip, se comprueba donde va a migrar 
-            // create a uniform_real_distribution to produce floats from [-7,13)
-            int desplazamientos[] = {-1,1};
-            int len_desp = 2;
-            
-            //int desplazamiento_max[3];
-            nanovdb::CurvatureStencil<nanovdb::FloatGrid> stencilEndothelial(*grid_s);
-            nanovdb::CurvatureStencil<nanovdb::Vec3fGrid> stencilTAF(*gradientTAF);
-            nanovdb::CurvatureStencil<nanovdb::Vec3fGrid> stencilFibronectin(*gradientFibronectin);
-            
-            nanovdb::Coord coord_max;
-            //float max_derivative = computeEndothelial(coord,stencilEndothelial,stencilTAF,stencilFibronectin);
-            float max_derivative = -1;
-            //Se calcula el maximo
-            
-            // for(int dimension = 0 ;dimension <3;dimension++){
-
-            //     for(int desplazamiento = 0;desplazamiento<len_desp;desplazamiento++){
-            //         nanovdb::Coord new_coord;
-            //         for(int j = 0 ;j<3;j++){
-            //             new_coord[j] = coord[j];//
-            //             if(dimension == j){
-            //                 new_coord[j]+=desplazamientos[desplazamiento];
-            //             }
-            //         }
-            //         //new_coord[dimension] += desplazamientos[desplazamiento];
-            //         if(!(accessor_endothelial.getValue(new_coord)>0.0)){
-            //             float value_i = computeEndothelial(new_coord,stencilEndothelial,stencilTAF,stencilFibronectin);
-            //             if(value_i > max_derivative){
-            //                 max_derivative = value_i;
-            //                 // coord_max = new_coord;
-            //                 for(int j = 0 ;j<3;j++){
-            //                     coord_max[j] = new_coord[j];
-            //                 }
-            //             }
-            //         }
-                    
-            //     }
-            // }
-            coord_max = coord;
-            coord_max[0]+=1;
-            //Se migra
-            leaf_d->setValueOnly(coord_max,1.0);
-            leaf_tip->setValueOnly(coord_max,1.0);
-            //En funcion de la probabilidad se hace branch o no;
-            float taf_new = leaf_TAF->getValue(coord_max);
-            //Si el valor de TAF en la nueva direccion es alto , hay posibilidad de que 
-            //la vena se divida en 2
-            
-            // if(taf_new >= 0.8 && random >= 1-vector_probabilidades[3]){
+        if(leaf_tip->getValue(i)>0){
+            // if(isMax(coord_d,gridTip,gridDerivativeEndothelial,grid_destiny_discrete)){
+            //     leaf_d->setValue(coord_d,1.0);
+            //     leaf_tip->setValue(coord_d,1.0);
+            // }else{
+            //     leaf_tip->setValue(coord,0);
                 
-            // }else if(taf_new >=0.7 && random >= 1-vector_probabilidades[2] ){
-
-            // }else if(taf_new >= 0.5&& random >= 1-vector_probabilidades[1]){
-
-            // }else if(taf_new >=0.3&& random >= 1-vector_probabilidades[0]){
-
-            // }else if(coord_max != coord){
-            //     //NO hay branch
-            //     leaf_tip->setValueOnly(coord,0.0);
             // }
-            
-            //printf("%f\n",value);
-            
-        }else if(false && isNextToEndothelialDiscrete(coord_d,grid_s)){
+            leaf_tip->setValue(coord_d,0);
+            coord_d[0]+=1;
+            leaf_tip->setValue(coord_d,1);
+
+            //FALTA EL BRANCHING
+           
+        }else if(false&&isNextToEndothelialDiscrete(coord_d,grid_source_discrete)){
             //first = false;
             if(taf_value >= 0.8 && random >= 1.0-vector_probabilidades[3]){
                 //printf("NEW TIP\n");
