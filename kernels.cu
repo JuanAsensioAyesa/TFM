@@ -364,7 +364,7 @@ void equationEndothelial(nanovdb::FloatGrid * grid_s,nanovdb::FloatGrid * grid_d
         if(new_value > 1){
             new_value = 1;
         }
-        leaf_d->setValueOnly(coord_nano,derivative);//6 minutos //* 60 segundos
+        leaf_d->setValueOnly(coord_nano,new_value);//6 minutos //* 60 segundos
         //leaf_d->setValueOnly(coord_nano,derivative);//6 minutos //* 60 segundos
 
     };
@@ -584,17 +584,19 @@ void equationEndothelialDiscrete(nanovdb::FloatGrid * grid_source_discrete,nanov
         //leaf_d->setValueOnly(coord_dummy,100);
 
        // static int first = true;
-        if(leaf_tip->getValue(i)>0){
-            // if(isMax(coord_d,gridTip,gridDerivativeEndothelial,grid_destiny_discrete)){
-            //     leaf_d->setValue(coord_d,1.0);
-            //     leaf_tip->setValue(coord_d,1.0);
-            // }else{
-            //     leaf_tip->setValue(coord,0);
+       if(isNextToEndothelialDiscrete(coord_d,gridTip)){
+        //if(leaf_tip->getValue(i)>0){
+            //if((coord_d[1]-1)%2 == 0){
+            if(isMax(coord_d,gridTip,gridDerivativeEndothelial,grid_source_discrete)){
+                leaf_d->setValue(coord_d,1.0);
+                leaf_tip->setValue(coord_d,1.0);
+            }else{
+                leaf_tip->setValue(coord_d,0);
                 
-            // }
-            leaf_tip->setValue(coord_d,0);
-            coord_d[0]+=1;
-            leaf_tip->setValue(coord_d,1);
+            }
+            //leaf_tip->setValue(coord_d,0);
+            //coord_d[0]+=1;
+            //leaf_tip->setValue(coord_d,1);
 
             //FALTA EL BRANCHING
            
