@@ -563,12 +563,12 @@ void equationEndothelialDiscrete(nanovdb::FloatGrid * grid_source_discrete,nanov
         auto *leaf_s = grid_source_discrete->tree().getFirstNode<0>() + (n >> 9);// this only works if grid->isSequential<0>() == true
         auto *leaf_tip_write = gridTipWrite->tree().getFirstNode<0>()+(n>>9);
         auto *leaf_tip_read = gridTipRead->tree().getFirstNode<0>()+(n>>9);
-        auto *leaf_TAF = gridTAF->tree().getFirstNode<0>() + (n >> 9);
+        //auto *leaf_TAF = gridTAF->tree().getFirstNode<0>() + (n >> 9);
         const int i = n & 511;
         auto coord = leaf_tip_write->offsetToGlobalCoord(i);
         auto coord_d = leaf_d->offsetToGlobalCoord(i);
         float vector_probabilidades[] = {0.04,0.06,0.08,0.2};
-        float taf_value = leaf_TAF->getValue(coord);
+        //float taf_value = leaf_TAF->getValue(coord);
 
         thrust::default_random_engine randEng;
         thrust::uniform_real_distribution<float> uniDist;
@@ -584,7 +584,9 @@ void equationEndothelialDiscrete(nanovdb::FloatGrid * grid_source_discrete,nanov
         // coord_dummy[1] =0 ;
         // coord_dummy[2] = 0 ;
         //leaf_d->setValueOnly(coord_dummy,100);
-
+        if(leaf_tip_read->getValue(i)>0){
+            printf("VALUE TIP %d\n",leaf_s->getValue(i));
+        }
        // static int first = true;
        if(isNextToEndothelialDiscrete(coord_d,gridTipRead)){
         //if(leaf_tip->getValue(i)>0){
@@ -612,6 +614,9 @@ void equationEndothelialDiscrete(nanovdb::FloatGrid * grid_source_discrete,nanov
 
             //FALTA EL BRANCHING
            
+        }else{
+            float value = leaf_s->getValue(i);
+            leaf_d->setValue(coord_d,value);
         }
         // }else if(false&&isNextToEndothelialDiscrete(coord_d,grid_source_discrete)){
         //     //first = false;
