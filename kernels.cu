@@ -592,12 +592,12 @@ void equationEndothelialDiscrete(nanovdb::FloatGrid * grid_source_discrete,nanov
         //if(leaf_tip->getValue(i)>0){
             //if((coord_d[1]-1)%2 == 0){
             //if(coord_d[1]%2 == 0 ){
-            // int positionSelf = getPosition(coord_d,gridTipRead);
+            int positionSelf = getPosition(coord_d,gridTipRead);
 
             if(isMax(coord_d,gridTipRead,gridDerivativeEndothelial,grid_source_discrete)){
                 //printf("Is max %d\n",positionSelf);
                 leaf_d->setValue(coord_d,1.0);
-                leaf_tip_write->setValue(coord_d,1.0);
+                leaf_tip_write->setValue(coord_d,2.0);
             }else{
                 //leaf_tip_write->setValue(coord_d,0);
                 
