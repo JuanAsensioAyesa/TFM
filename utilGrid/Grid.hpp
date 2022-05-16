@@ -258,9 +258,9 @@ class Grid{
                         }else if constexpr(std::is_same<OpenGridType,openvdb::Vec3s>::value){
                             openvdb::Vec3s vec;
                             //Para probar bien los gradientes
-                            vec[0] = -(i+2*size_lado/3) * (i +size_lado/3) ;//* (i -size_lado/2);
-                            vec[1]  = -(j+2*profundidad_total/3) * (j +profundidad_total/3);// *(j - profundidad_total/2);
-                            vec[2] =  -(k+2*size_lado/3) * (k +size_lado/3);// * (k - size_lado/2);
+                            vec[0] = -(i+2*size_lado/3) * (i +size_lado/3) * (i -size_lado/2);
+                            vec[1]  = -(j+2*profundidad_total/3) * (j +profundidad_total/3) *(j - profundidad_total/2);
+                            vec[2] =  -(k+2*size_lado/3) * (k +size_lado/3) * (k - size_lado/2);
 
                             float max_value_abs = 200;
                             

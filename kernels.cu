@@ -353,6 +353,10 @@ void equationEndothelial(nanovdb::FloatGrid * grid_s,nanovdb::FloatGrid * grid_d
         //printf("%f %f\n",factorTAF,factorFibronectin);
 
         float derivative = factorEndothelial  - factorTAF - factorFibronectin;
+        //derivative = -factorTAF;
+        // if(derivative > 0 ){
+        //     printf("%f\n",derivative);
+        // }
         // if(derivative > 100){
         //     printf("%f %f %f\n",factorEndothelial,factorTAF,factorFibronectin);
         // }
@@ -544,6 +548,7 @@ __device__ bool isMax(nanovdb::Coord coord_self,nanovdb::FloatGrid * endothelial
                 nanovdb::Coord new_coord = coord_endothelial;
                 new_coord[dimension] += desplazamientos[desplazamiento];
                 float value_i = accessor_endothelial.getValue(new_coord);
+                //printf("Position Self %d, new_coord %d %d %d value_i %f\n",positionSelf,new_coord[0],new_coord[1],new_coord[2],value_i);
                 if(accessor_discrete.getValue(new_coord) == 0 && value_i > value_max){
                     value_max = value_i;
                     coord_max = new_coord;
@@ -551,6 +556,7 @@ __device__ bool isMax(nanovdb::Coord coord_self,nanovdb::FloatGrid * endothelial
             }
         }
     }
+    //return positionSelf == 4;
     return positionSelf != 0 && coord_max == coord_self;
 
 
@@ -664,8 +670,11 @@ void branching(nanovdb::FloatGrid* gridEndothelialTip,int leafCount){
         const int i = n & 511;
         auto coord_d = leaf_tip->offsetToGlobalCoord(i);
         float value = leaf_tip->getValue(i);
-
-        float new_value = value-1;
+        float new_value = 1;
+        if(true || i%2==0){
+            new_value = value-1;
+        }
+        //float new_value = value-1;
         if(new_value < 0 ){
             new_value =0;
         }
@@ -809,7 +818,7 @@ void product(nanovdb::FloatGrid * gridTAF,nanovdb::FloatGrid * gridEndothelial,n
         //auto coord = leaf_d->offsetToGlobalCoord(i);
 
         auto new_value = leaf_TAF->getValue(i)*leaf_Endothelial->getValue(i);
-
+        //new_value = leaf_TAF->getValue(i);
         leaf_d->setValueOnly(i,new_value);
 
     };
