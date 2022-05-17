@@ -166,6 +166,7 @@ int main(int argc,char * argv[]){
     gridTAFEndothelial.fillRandom();
     // gridEndothelialDiscrete.fillRandom();
     int tamanio_tumor = 30;//Tamanio en voxels
+    tamanio_tumor = 1;
     //esquina_izquierda[1]-=20;
     openvdb::FloatGrid::Accessor accessorFibronectin1 = gridFibronectin.getAccessorOpen1();
     openvdb::FloatGrid::Accessor accessorFibronectin2 = gridFibronectin.getAccessorOpen2();
@@ -179,7 +180,7 @@ int main(int argc,char * argv[]){
     //createRectangle(accessor_2_endothelial,esquina_izquierda,tamanio_tumor,1.0);
     //createRectangle(accessorFibronectin1,esquina_izquierda,tamanio_tumor,10);
     //createRectangle(accessorFibronectin2,esquina_izquierda,tamanio_tumor,10);
-    esquina_izquierda[0]-=30;
+    esquina_izquierda[0]-=20;
     //createRectangle(accessor_1_Endothelial_discrete,esquina_izquierda,tamanio_tumor,1.0);
     //createRectangle(accessor_2_Endothelial_discrete,esquina_izquierda,tamanio_tumor,1.0);
 
@@ -187,7 +188,7 @@ int main(int argc,char * argv[]){
     //createRectangle(accessor_2_endothelial,esquina_izquierda,tamanio_tumor,1);
     //createRectangle(accessor_1_endothelial,esquina_izquierda,1,1);
     //createRectangle(accessor_2_endothelial,esquina_izquierda,tamanio_tumor,1);
-    tamanio_tumor = 1;
+    
     //esquina_izquierda[2] += 10;
     createRectangle(accessor_1_Tip,esquina_izquierda,tamanio_tumor,1);
     createRectangle(accessor_2_Tip,esquina_izquierda,tamanio_tumor,1);

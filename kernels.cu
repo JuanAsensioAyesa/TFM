@@ -308,7 +308,11 @@ void pruebaGradiente(nanovdb::Vec3fGrid  *grid_d,nanovdb::FloatGrid* gridSource 
 }
 
 
-
+__device__ float chemotacticSensivity(float c){
+    float chemotacticMigration = 0.38;
+    float chemotacticConstant = 0.6;
+    return chemotacticMigration /(1 + chemotacticConstant*c);
+}
 /*
     Ecuacion 6
 */
@@ -316,6 +320,7 @@ void equationEndothelial(nanovdb::FloatGrid * grid_s,nanovdb::FloatGrid * grid_d
     auto kernel = [grid_s,grid_d,gridTAF,gridFibronectin,gradientTAF,gradientFibronectin] __device__ (const uint64_t n) {
         auto *leaf_d = grid_d->tree().getFirstNode<0>() + (n >> 9);// this only works if grid->isSequential<0>() == true
         auto *leaf_s = grid_s->tree().getFirstNode<0>() + (n >> 9);// this only works if grid->isSequential<0>() == true
+        auto *leaf_taf = gridTAF->tree().getFirstNode<0>() + (n >> 9);
         const int i = n & 511;
         
         auto coord = leaf_d->offsetToGlobalCoord(i);
@@ -336,8 +341,12 @@ void equationEndothelial(nanovdb::FloatGrid * grid_s,nanovdb::FloatGrid * grid_d
         
         stencilTAF.moveTo(coord_nano);
         auto gradientTAF = stencilTAF.gradient();
+        float taf_value = leaf_taf->getValue(coord_nano);
+        for(int index = 0 ;index <3;index++){
+            gradientTAF[index] *= chemotacticSensivity(taf_value);
+        }
         float factorTAF = gradientTAF[0][0] + gradientTAF[1][1] + gradientTAF[2][2];
-        
+        factorTAF *=1.1;
         //printf("%f  %f  %f\n",gradientTAF[0][0],gradientTAF[1][1],gradientTAF[2][2]);
         
         //float factorTAF  = stencilNano.gaussianCurvature() ;
@@ -350,10 +359,10 @@ void equationEndothelial(nanovdb::FloatGrid * grid_s,nanovdb::FloatGrid * grid_d
         float factorFibronectin = gradientFibronectin[0][0] + gradientFibronectin[1][1] + gradientFibronectin[2][2];
         factorFibronectin = factorFibronectin * 0.28;
         
-        //printf("%f %f\n",factorTAF,factorFibronectin);
+        //printf("%f %f %f\n",factorEndothelial,factorTAF,factorFibronectin);
 
-        float derivative = factorEndothelial  - factorTAF - factorFibronectin;
-        //derivative = -factorTAF;
+        float derivative = factorEndothelial  - factorTAF ;//+ factorFibronectin;
+        //derivative = factorTAF;
         // if(derivative > 0 ){
         //     printf("%f\n",derivative);
         // }
@@ -468,6 +477,18 @@ __device__ int getPosition(nanovdb::Coord coord_self,nanovdb::FloatGrid * endoth
     auto accessor = endothelialTip->tree().getAccessor();
     nanovdb::Coord coord_i = coord_self;
 
+    coord_i[2] = coord_i[2] - 1; //Comprobamos frente
+    if(accessor.getValue(coord_i) != 0 ){
+        return 6;//coord_self esta a la dch de la celula endothelial
+    }
+    coord_i[2] = coord_self[2];
+
+    coord_i[2] = coord_i[2] + 1; //Comprobamos frente
+    if(accessor.getValue(coord_i) != 0 ){
+        return 5;//coord_self esta a la dch de la celula endothelial
+    }
+    coord_i[2] = coord_self[2];
+
     coord_i[1] = coord_i[1] +1; //Comprobamos arriba;
     if(accessor.getValue(coord_i) != 0 ){
         return 3;//coord_self esta debajo de la celula endothelial
@@ -492,16 +513,7 @@ __device__ int getPosition(nanovdb::Coord coord_self,nanovdb::FloatGrid * endoth
     }
     coord_i[0] = coord_self[0];
 
-    coord_i[2] = coord_i[2] - 1; //Comprobamos frente
-    if(accessor.getValue(coord_i) != 0 ){
-        return 6;//coord_self esta a la dch de la celula endothelial
-    }
-    coord_i[2] = coord_self[2];
-
-    coord_i[2] = coord_i[2] + 1; //Comprobamos frente
-    if(accessor.getValue(coord_i) != 0 ){
-        return 5;//coord_self esta a la dch de la celula endothelial
-    }
+    
     return 0;
 
 
@@ -688,11 +700,7 @@ void branching(nanovdb::FloatGrid* gridEndothelialTip,int leafCount){
     thrust::for_each(iter, iter + 512*leafCount, kernel);
 }
 
-__device__ float chemotacticSensivity(float c){
-    float chemotacticMigration = 0.38;
-    float chemotacticConstant = 0.6;
-    return chemotacticMigration /(1 + chemotacticConstant*c);
-}
+
 /*
     Genera el gradiente escalado del TAF, para poder calcular la divergencia
 */
@@ -818,7 +826,7 @@ void product(nanovdb::FloatGrid * gridTAF,nanovdb::FloatGrid * gridEndothelial,n
         //auto coord = leaf_d->offsetToGlobalCoord(i);
 
         auto new_value = leaf_TAF->getValue(i)*leaf_Endothelial->getValue(i);
-        //new_value = leaf_TAF->getValue(i);
+        new_value = leaf_TAF->getValue(i);
         leaf_d->setValueOnly(i,new_value);
 
     };

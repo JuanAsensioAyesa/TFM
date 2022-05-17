@@ -248,9 +248,9 @@ class Grid{
                             if(createBoth){
                                 accessor_open_2.setValue(coordenadas_open,dist(e2));
                             }
-                            // accessor_open.setValue(coordenadas_open,0.1);
+                            // accessor_open.setValue(coordenadas_open,i*i*j*j);
                             // if(createBoth){
-                            //     accessor_open_2.setValue(coordenadas_open,0.1);
+                            //     accessor_open_2.setValue(coordenadas_open,i*i*j*j);
                             // }
 
                             //accessor_open.setValue(coordenadas_open,i*i*i);
