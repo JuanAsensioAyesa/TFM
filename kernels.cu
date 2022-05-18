@@ -346,7 +346,7 @@ void equationEndothelial(nanovdb::FloatGrid * grid_s,nanovdb::FloatGrid * grid_d
             gradientTAF[index] *= chemotacticSensivity(taf_value);
         }
         float factorTAF = gradientTAF[0][0] + gradientTAF[1][1] + gradientTAF[2][2];
-        factorTAF *=1.1;
+        //factorTAF *=10;
         //printf("%f  %f  %f\n",gradientTAF[0][0],gradientTAF[1][1],gradientTAF[2][2]);
         
         //float factorTAF  = stencilNano.gaussianCurvature() ;
@@ -361,8 +361,8 @@ void equationEndothelial(nanovdb::FloatGrid * grid_s,nanovdb::FloatGrid * grid_d
         
         //printf("%f %f %f\n",factorEndothelial,factorTAF,factorFibronectin);
 
-        float derivative = factorEndothelial  - factorTAF ;//+ factorFibronectin;
-        //derivative = factorTAF;
+        float derivative = factorEndothelial  + factorTAF ;//+ factorFibronectin;
+        derivative = -factorTAF;
         // if(derivative > 0 ){
         //     printf("%f\n",derivative);
         // }
@@ -377,7 +377,7 @@ void equationEndothelial(nanovdb::FloatGrid * grid_s,nanovdb::FloatGrid * grid_d
         if(new_value > 1){
             new_value = 1;
         }
-        leaf_d->setValueOnly(coord_nano,new_value);//6 minutos //* 60 segundos
+        leaf_d->setValueOnly(coord_nano,derivative);//6 minutos //* 60 segundos
         //leaf_d->setValueOnly(coord_nano,derivative);//6 minutos //* 60 segundos
 
     };
@@ -803,7 +803,7 @@ void laplacian(nanovdb::FloatGrid * grid_s,nanovdb::FloatGrid * grid_d, uint64_t
         // if(laplacian!= 0){
         //     printf("%f\n",laplacian);
         // }
-        auto new_value = old_value + laplacian*0.06;
+        auto new_value = old_value + laplacian*0.1;
 
         // if(new_value < 0 ){
         //     new_value = 0;
