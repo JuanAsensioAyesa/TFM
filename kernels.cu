@@ -362,7 +362,7 @@ void equationEndothelial(nanovdb::FloatGrid * grid_s,nanovdb::FloatGrid * grid_d
         //printf("%f %f %f\n",factorEndothelial,factorTAF,factorFibronectin);
 
         float derivative = factorEndothelial  + factorTAF ;//+ factorFibronectin;
-        derivative = -factorTAF;
+        derivative = factorEndothelial -factorTAF ;//- factorFibronectin;
         // if(derivative > 0 ){
         //     printf("%f\n",derivative);
         // }
@@ -826,7 +826,7 @@ void product(nanovdb::FloatGrid * gridTAF,nanovdb::FloatGrid * gridEndothelial,n
         //auto coord = leaf_d->offsetToGlobalCoord(i);
 
         auto new_value = leaf_TAF->getValue(i)*leaf_Endothelial->getValue(i);
-        new_value = leaf_TAF->getValue(i);
+        //new_value = leaf_TAF->getValue(i);
         leaf_d->setValueOnly(i,new_value);
 
     };
