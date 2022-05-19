@@ -154,7 +154,7 @@ int main(int argc,char * argv[]){
     createSkin(accessor_1_TAF,size_lado,profundidad_total,coordenadas,dataIniEndothelial);
     createSkin(accessor_2_TAF,size_lado,profundidad_total,coordenadas,dataIniEndothelial);
 
-    valor_ini = 0.001;
+    valor_ini = 0.00001;
     dataIniEndothelial.valueBasale = valor_ini;
     dataIniEndothelial.valueCorneum = valor_ini;
     dataIniEndothelial.valueDermis = valor_ini;
@@ -175,7 +175,7 @@ int main(int argc,char * argv[]){
     gridTAFEndothelial.fillRandom();
     // gridEndothelialDiscrete.fillRandom();
     int tamanio_tumor = 30;//Tamanio en voxels
-    tamanio_tumor = 30;
+    //tamanio_tumor = 1;
     //esquina_izquierda[1]-=20;
     openvdb::FloatGrid::Accessor accessorFibronectin1 = gridFibronectin.getAccessorOpen1();
     openvdb::FloatGrid::Accessor accessorFibronectin2 = gridFibronectin.getAccessorOpen2();

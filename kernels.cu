@@ -16,7 +16,7 @@
 #include <thrust/random.h>
 
 const float threshold_vecino = 0;
-const float time_factor = 6; //Timestep de 6 minutos pasado a segundos
+const float time_factor = 6*60; //Timestep de 6 minutos pasado a segundos
 __device__ const float ini_endothelial = 1.0;
 
 /**
@@ -342,9 +342,9 @@ void equationEndothelial(nanovdb::FloatGrid * grid_s,nanovdb::FloatGrid * grid_d
         stencilTAF.moveTo(coord_nano);
         auto gradientTAF = stencilTAF.gradient();
         float taf_value = leaf_taf->getValue(coord_nano);
-        for(int index = 0 ;index <3;index++){
-            gradientTAF[index] *= chemotacticSensivity(taf_value);
-        }
+        // for(int index = 0 ;index <3;index++){
+        //     gradientTAF[index] *= chemotacticSensivity(taf_value);
+        // }
         float factorTAF = gradientTAF[0][0] + gradientTAF[1][1] + gradientTAF[2][2];
         //factorTAF *=10;
         //printf("%f  %f  %f\n",gradientTAF[0][0],gradientTAF[1][1],gradientTAF[2][2]);
@@ -845,10 +845,12 @@ void cleanEndothelial(nanovdb::FloatGrid * gridEndothelial,uint64_t leafCount){
         //     printf("%d\n",coord[1]);
         // }
         if(coord[0] == -250 || coord[1] == -150 || coord[2] == -250){
+            leaf_Endothelial->setValueOnly(i,0.00001);
             leaf_Endothelial->setValueOnly(i,0);
             //printf("Uese\n");
         }
         if(coord[0] == 0 || coord[1] == 0 || coord[2] == 0){
+            leaf_Endothelial->setValueOnly(i,0.00001);
             leaf_Endothelial->setValueOnly(i,0);
             //printf("Uese\n");
         }
