@@ -31,7 +31,7 @@ void generateEndothelial(nanovdb::FloatGrid *grid_d, uint64_t leafCount, int lim
         
         auto coord_indi = leaf_d->offsetToGlobalCoord(i);
         auto coord = leaf_d->origin();
-        coord = coord_indi;
+        //coord = coord_indi;
         //printf("%d %d %d\n",coord[0],coord[1],coord[2]);
         if(coord[1]>lim_inf && coord[1]<lim_sup){
             if(coord[0]%modulo == 0 && coord[2]%modulo == 0 ){
@@ -361,8 +361,8 @@ void equationEndothelial(nanovdb::FloatGrid * grid_s,nanovdb::FloatGrid * grid_d
         
         //printf("%f %f %f\n",factorEndothelial,factorTAF,factorFibronectin);
 
-        float derivative = factorEndothelial  + factorTAF ;//+ factorFibronectin;
-        derivative = factorEndothelial - factorTAF - factorFibronectin;
+        //float derivative = factorEndothelial  + factorTAF ;//+ factorFibronectin;
+        float derivative = factorEndothelial - factorTAF - factorFibronectin;
         // if(derivative > 0 ){
         //     printf("%f\n",derivative);
         // }
