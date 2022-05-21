@@ -31,7 +31,7 @@ void generateEndothelial(nanovdb::FloatGrid *grid_d, uint64_t leafCount, int lim
         
         auto coord_indi = leaf_d->offsetToGlobalCoord(i);
         auto coord = leaf_d->origin();
-        //coord = coord_indi;
+        coord = coord_indi;
         //printf("%d %d %d\n",coord[0],coord[1],coord[2]);
         if(coord[1]>lim_inf && coord[1]<lim_sup){
             if(coord[0]%modulo == 0 && coord[2]%modulo == 0 ){
@@ -590,12 +590,12 @@ void equationEndothelialDiscrete(nanovdb::FloatGrid * grid_source_discrete,nanov
 
         thrust::default_random_engine randEng;
         thrust::uniform_real_distribution<float> uniDist;
-        int discard = seed*i;
+        int discard = seed+(n+1);
         randEng.discard(discard);
         float random = uniDist(randEng);
 
 
-       
+        leaf_d->setValue(coord,random);
 
         // nanovdb::Coord coord_dummy;
         // coord_dummy[0] = 0 ;
@@ -606,36 +606,36 @@ void equationEndothelialDiscrete(nanovdb::FloatGrid * grid_source_discrete,nanov
         //     printf("TIP\n");
         // }
        // static int first = true;
-       if(isNextToEndothelialDiscrete(coord_d,gridTipRead)){
-        //if(leaf_tip->getValue(i)>0){
-            //if((coord_d[1]-1)%2 == 0){
-            //if(coord_d[1]%2 == 0 ){
-            int positionSelf = getPosition(coord_d,gridTipRead);
+    //    if(isNextToEndothelialDiscrete(coord_d,gridTipRead)){
+    //     //if(leaf_tip->getValue(i)>0){
+    //         //if((coord_d[1]-1)%2 == 0){
+    //         //if(coord_d[1]%2 == 0 ){
+    //         int positionSelf = getPosition(coord_d,gridTipRead);
 
-            if(isMax(coord_d,gridTipRead,gridDerivativeEndothelial,grid_source_discrete)){
-                //printf("Is max %d\n",positionSelf);
-                leaf_d->setValue(coord_d,1.0);
-                leaf_tip_write->setValue(coord_d,2.0);
-            }else{
-                //leaf_tip_write->setValue(coord_d,0);
+    //         if(isMax(coord_d,gridTipRead,gridDerivativeEndothelial,grid_source_discrete)){
+    //             //printf("Is max %d\n",positionSelf);
+    //             leaf_d->setValue(coord_d,1.0);
+    //             leaf_tip_write->setValue(coord_d,2.0);
+    //         }else{
+    //             //leaf_tip_write->setValue(coord_d,0);
                 
-            }
-            // }
-            // leaf_d->setValue(coord_d,1.0);
-            // //leaf_s->setValue(coord_d,1.0);
-            // if(leaf_s->getValue(coord_d)==0){
-            //     leaf_tip_write->setValue(coord_d,2.0);
-            // }
-            //leaf_tip->setValue(coord_d,0);
-            //coord_d[0]+=1;
-            //leaf_tip->setValue(coord_d,1);
+    //         }
+    //         // }
+    //         // leaf_d->setValue(coord_d,1.0);
+    //         // //leaf_s->setValue(coord_d,1.0);
+    //         // if(leaf_s->getValue(coord_d)==0){
+    //         //     leaf_tip_write->setValue(coord_d,2.0);
+    //         // }
+    //         //leaf_tip->setValue(coord_d,0);
+    //         //coord_d[0]+=1;
+    //         //leaf_tip->setValue(coord_d,1);
 
-            //FALTA EL BRANCHING
+    //         //FALTA EL BRANCHING
            
-        }else{
-            float value = leaf_s->getValue(i);
-            leaf_d->setValue(coord_d,value);
-        }
+    //     }else{
+    //         float value = leaf_s->getValue(i);
+    //         leaf_d->setValue(coord_d,value);
+    //     }
         // }else if(false&&isNextToEndothelialDiscrete(coord_d,grid_source_discrete)){
         //     //first = false;
         //     if(taf_value >= 0.8 && random >= 1.0-vector_probabilidades[3]){
