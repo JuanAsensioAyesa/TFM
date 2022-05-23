@@ -199,8 +199,9 @@ int main(int argc,char * argv[]){
     //createRectangle(accessor_2_endothelial,esquina_izquierda,tamanio_tumor,1);
     
     //esquina_izquierda[2] += 10;
-    // createRectangle(accessor_1_Tip,esquina_izquierda,tamanio_tumor,1);
-    // createRectangle(accessor_2_Tip,esquina_izquierda,tamanio_tumor,1);
+    tamanio_tumor = 1;
+    createRectangle(accessor_1_Tip,esquina_izquierda,tamanio_tumor,1);
+    createRectangle(accessor_2_Tip,esquina_izquierda,tamanio_tumor,1);
     
     // createRectangle(accessor_1_Endothelial_discrete,esquina_izquierda,tamanio_tumor,1);
     // createRectangle(accessor_2_Endothelial_discrete,esquina_izquierda,tamanio_tumor,1);
