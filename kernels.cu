@@ -910,7 +910,7 @@ void product(nanovdb::FloatGrid * gridTAF,nanovdb::FloatGrid * gridEndothelial,n
         //auto coord = leaf_d->offsetToGlobalCoord(i);
 
         auto new_value = leaf_TAF->getValue(i)*leaf_Endothelial->getValue(i);
-        //new_value = leaf_TAF->getValue(i);
+        new_value = leaf_TAF->getValue(i);
         leaf_d->setValueOnly(i,new_value);
 
     };
@@ -938,6 +938,25 @@ void cleanEndothelial(nanovdb::FloatGrid * gridEndothelial,uint64_t leafCount){
             leaf_Endothelial->setValueOnly(i,0);
             //printf("Uese\n");
         }
+    };
+    thrust::counting_iterator<uint64_t, thrust::device_system_tag> iter(0);
+    thrust::for_each(iter, iter + 512*leafCount, kernel);
+}
+
+void normalize(nanovdb::FloatGrid * gridTAF,float maxValue, uint64_t leafCount){
+    auto kernel = [gridTAF,maxValue] __device__ (const uint64_t n) {
+       // auto *leaf_d = grid_d->tree().getFirstNode<0>() + (n >> 9);// this only works if grid->isSequential<0>() == true
+        auto *leaf_TAF = gridTAF->tree().getFirstNode<0>() + (n >> 9);// this only works if grid->isSequential<0>() == true
+        //auto *leaf_Endothelial = gridEndothelial->tree().getFirstNode<0>() + (n >> 9);// this only works if grid->isSequential<0>() == true
+
+        const int i = n & 511;
+        
+        //auto coord = leaf_d->offsetToGlobalCoord(i);
+
+        
+        float new_value = leaf_TAF->getValue(i) / maxValue;
+        leaf_TAF->setValueOnly(i,new_value);
+
     };
     thrust::counting_iterator<uint64_t, thrust::device_system_tag> iter(0);
     thrust::for_each(iter, iter + 512*leafCount, kernel);
