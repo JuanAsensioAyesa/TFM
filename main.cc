@@ -433,14 +433,17 @@ int main(int argc,char * argv[]){
 
         }
         if(condition){
-            float maxAbs = computeMaxAbs(gridReadTAF_CPU);
+            //float maxAbs = computeMaxAbs(gridReadTAF_CPU);
             float max = computeMax(gridReadTAF_CPU);
-            if(maxAbs < 0 ){
-                absolute(gridReadTAF,nodeCount);
-                maxAbs = -maxAbs;
-            }
-            //addMax(gridReadTAF,maxAbs,nodeCount);
-            normalize(gridReadTAF,maxAbs,nodeCount);
+            float min = computeMin(gridReadTAF_CPU);
+            float addition = max - min;
+            float newMax = max + addition;
+            // if(maxAbs < 0 ){
+            //     absolute(gridReadTAF,nodeCount);
+            //     maxAbs = -maxAbs;
+            // }
+            addMax(gridReadTAF,addition,nodeCount);
+            normalize(gridReadTAF,newMax,nodeCount);
         }
         
         

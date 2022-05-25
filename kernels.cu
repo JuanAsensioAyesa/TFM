@@ -958,7 +958,7 @@ void normalize(nanovdb::FloatGrid * gridTAF,float maxValue, uint64_t leafCount){
         
         float new_value = leaf_TAF->getValue(i);
         if(maxValue > 0 ){
-            new_value = new_value / maxValue;
+            new_value = 1.0 - new_value / maxValue;
         }
         leaf_TAF->setValueOnly(i,new_value);
 
@@ -998,9 +998,7 @@ void absolute(nanovdb::FloatGrid * gridTAF, uint64_t leafCount){
 
         
         float new_value = leaf_TAF->getValue(i) ;
-        if(new_value < 0 ){
-            new_value = -new_value;
-        }
+        new_value = -1.0 * new_value;
         
         leaf_TAF->setValueOnly(i,new_value);
 
