@@ -125,7 +125,7 @@ class Grid{
                     if(createBoth){
                         handleNano_2 = nanovdb::openToNanoVDB<nanovdb::CudaDeviceBuffer>(*gridOpen_2_ptr);
                     }
-                    first_upload = false;
+                    //first_upload = false;
                 }
                 
                 handleNano_1.deviceUpload(0,true);

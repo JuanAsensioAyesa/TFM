@@ -654,18 +654,19 @@ __device__ void moveRandom(nanovdb::Coord coord_self,nanovdb::FloatGrid* gridEnd
 
 }
 
-void equationEndothelialDiscrete(nanovdb::FloatGrid * grid_source_discrete,nanovdb::FloatGrid * grid_destiny_discrete,nanovdb::FloatGrid* gridDerivativeEndothelial,nanovdb::FloatGrid* gridTAF,nanovdb::FloatGrid * gridTipRead,nanovdb::FloatGrid* gridTipWrite,int seed,uint64_t leafCount){
+void equationEndothelialDiscrete(nanovdb::FloatGrid * grid_source_discrete,nanovdb::FloatGrid * grid_destiny_discrete,nanovdb::FloatGrid* gridDerivativeEndothelial,nanovdb::FloatGrid* gridDerivativeEndothelialWrite,nanovdb::FloatGrid* gridTAF,nanovdb::FloatGrid * gridTipRead,nanovdb::FloatGrid* gridTipWrite,int seed,uint64_t leafCount){
     thrust::minstd_rand rng;
     thrust::default_random_engine randEng;
     thrust::uniform_real_distribution<float> uniDist;
     int discard = seed;
     randEng.discard(discard);
     float random = uniDist(randEng);
-    auto kernel = [grid_source_discrete,grid_destiny_discrete,gridDerivativeEndothelial,gridTAF,gridTipRead,gridTipWrite,rng,seed,random] __device__ (const uint64_t n) {
+    auto kernel = [grid_source_discrete,grid_destiny_discrete,gridDerivativeEndothelial,gridDerivativeEndothelialWrite,gridTAF,gridTipRead,gridTipWrite,rng,seed,random] __device__ (const uint64_t n) {
         auto *leaf_d = grid_destiny_discrete->tree().getFirstNode<0>() + (n >> 9);// this only works if grid->isSequential<0>() == true
         auto *leaf_s = grid_source_discrete->tree().getFirstNode<0>() + (n >> 9);// this only works if grid->isSequential<0>() == true
         auto *leaf_tip_write = gridTipWrite->tree().getFirstNode<0>()+(n>>9);
         auto *leaf_tip_read = gridTipRead->tree().getFirstNode<0>()+(n>>9);
+        auto *leaf_endothelial_write = gridDerivativeEndothelialWrite->tree().getFirstNode<0>()+(n>>9);
         //auto *leaf_TAF = gridTAF->tree().getFirstNode<0>() + (n >> 9);
         const int i = n & 511;
         auto coord = leaf_tip_write->offsetToGlobalCoord(i);
@@ -699,6 +700,7 @@ void equationEndothelialDiscrete(nanovdb::FloatGrid * grid_source_discrete,nanov
                 //printf("Is max %d\n",positionSelf);
                 leaf_d->setValue(coord_d,1.0);
                 leaf_tip_write->setValue(coord_d,2.0);
+                leaf_endothelial_write->setValue(coord_d,1.0);
             
             }else{
                 //leaf_tip_write->setValue(coord_d,0);
@@ -910,7 +912,7 @@ void product(nanovdb::FloatGrid * gridTAF,nanovdb::FloatGrid * gridEndothelial,n
         //auto coord = leaf_d->offsetToGlobalCoord(i);
 
         auto new_value = leaf_TAF->getValue(i)*leaf_Endothelial->getValue(i);
-        new_value = leaf_TAF->getValue(i);
+        //new_value = leaf_TAF->getValue(i);
         leaf_d->setValueOnly(i,new_value);
 
     };

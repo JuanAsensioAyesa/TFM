@@ -214,7 +214,7 @@ int main(int argc,char * argv[]){
     //createRectangle(accessor_2_endothelial,esquina_izquierda,tamanio_tumor,1.0);
     //createRectangle(accessorFibronectin1,esquina_izquierda,tamanio_tumor,10);
     //createRectangle(accessorFibronectin2,esquina_izquierda,tamanio_tumor,10);
-    esquina_izquierda[0]-=15;
+    esquina_izquierda[0]-=20;
     //createRectangle(accessor_1_Endothelial_discrete,esquina_izquierda,tamanio_tumor,1.0);
     //createRectangle(accessor_2_Endothelial_discrete,esquina_izquierda,tamanio_tumor,1.0);
 
@@ -227,26 +227,28 @@ int main(int argc,char * argv[]){
     tamanio_tumor = 1;
     createRectangle(accessor_1_Tip,esquina_izquierda,tamanio_tumor,1);
     createRectangle(accessor_2_Tip,esquina_izquierda,tamanio_tumor,1);
+    createRectangle(accessor_1_endothelial,esquina_izquierda,tamanio_tumor,1);
+    createRectangle(accessor_2_endothelial,esquina_izquierda,tamanio_tumor,1);
     
-    // createRectangle(accessor_1_Endothelial_discrete,esquina_izquierda,tamanio_tumor,1);
-    // createRectangle(accessor_2_Endothelial_discrete,esquina_izquierda,tamanio_tumor,1);
+    createRectangle(accessor_1_Endothelial_discrete,esquina_izquierda,tamanio_tumor,1);
+    createRectangle(accessor_2_Endothelial_discrete,esquina_izquierda,tamanio_tumor,1);
 
     //createRectangle(accessor_2_endothelial,esquina_izquierda,tamanio_tumor,1);
     //createRectangle(accessor_1_MDE,esquina_izquierda,tamanio_tumor,10);
     //createRectangle(accessor_2_MDE,esquina_izquierda,tamanio_tumor,10);
     //gridMDE.fillRandom();
-    std::cout<<"Previo a solve"<<std::endl;
-    auto state = openvdb::math::pcg::terminationDefaults<float>();
-    auto tree = gridTAF.getPtrOpen1()->tree();
-    auto newTree = openvdb::tools::poisson::solve<openvdb::v9_0::FloatTree>(tree,state);
-    gridTAF.getPtrOpen1()->setTree(newTree->copy());
-    std::cout<<"Post solve"<<std::endl;
+    // std::cout<<"Previo a solve"<<std::endl;
+    // auto state = openvdb::math::pcg::terminationDefaults<float>();
+    // auto tree = gridTAF.getPtrOpen1()->tree();
+    // auto newTree = openvdb::tools::poisson::solve<openvdb::v9_0::FloatTree>(tree,state);
+    // gridTAF.getPtrOpen1()->setTree(newTree->copy());
+    // std::cout<<"Post solve"<<std::endl;
     
     
     //gridEndothelial.fillRandom();
     //gridVectorPrueba.fillRandom();
     gridEndothelial.upload();
-    gridTAF.upload();
+    //gridTAF.upload();
     gridFibronectin.upload();
     gridGradienteTAF.upload();
     gridGradienteFibronectin.upload();
@@ -325,6 +327,25 @@ int main(int argc,char * argv[]){
     std::uniform_int_distribution< u32 > distribute( 1, nodeCount);
     for(int i = 0 ;i<veces;i++){
         std::cout<<i<<std::endl;
+        if(i>0){
+            gridTAF.download();
+            gridTAF.copyNanoToOpen();
+        }
+        
+        auto state = openvdb::math::pcg::terminationDefaults<float>();
+        
+        if(i%2==0){
+            auto tree = gridTAF.getPtrOpen1()->tree();
+            auto newTree = openvdb::tools::poisson::solve<openvdb::v9_0::FloatTree>(tree,state);
+            gridTAF.getPtrOpen1()->setTree(newTree->copy());
+
+        }else{
+            auto tree = gridTAF.getPtrOpen2()->tree();
+            auto newTree = openvdb::tools::poisson::solve<openvdb::v9_0::FloatTree>(tree,state);
+            gridTAF.getPtrOpen2()->setTree(newTree->copy());
+
+        }
+        gridTAF.upload();
         if(i % 2 == 0 ){
             gridRead = gridEndothelialDiscrete.getPtrNano1(typePointer::DEVICE);
             gridWrite = gridEndothelialDiscrete.getPtrNano2(typePointer::DEVICE);
@@ -368,7 +389,10 @@ int main(int argc,char * argv[]){
             endothelialContinueWrite = gridEndothelial.getPtrNano1(typePointer::DEVICE);
 
         }
-        if(i == 0 ){
+
+        
+
+        if(true || i == 0 ){
             normalize(gridReadTAF,computeMin(gridReadTAF_CPU),nodeCount);
 
         }
@@ -380,7 +404,7 @@ int main(int argc,char * argv[]){
         generateGradientTAF(gridReadTAF,gridTAFEndothelial.getPtrNano1(typePointer::DEVICE),gridGradienteTAF.getPtrNano1(typePointer::DEVICE),nodeCount);
         pruebaGradiente(gridGradienteEndothelial.getPtrNano1(typePointer::DEVICE),gridRead,nodeCount);
         equationEndothelial(endothelialContinueRead,endothelialContinueWrite,gridReadTAF,gridReadFibronectin,gridGradienteTAF.getPtrNano1(typePointer::DEVICE),gridGradienteFibronectin.getPtrNano1(typePointer::DEVICE),nodeCount);
-        equationEndothelialDiscrete(gridRead,gridWrite,endothelialContinueRead,gridReadTAF,gridTip_Read,gridTip_Write,distribute(generator),nodeCount);
+        equationEndothelialDiscrete(gridRead,gridWrite,endothelialContinueRead,endothelialContinueWrite,gridReadTAF,gridTip_Read,gridTip_Write,distribute(generator),nodeCount);
         branching(gridTip_Write,nodeCount);
         ////generateEndothelial(gridEndothelial.getPtrNano1(typePointer::DEVICE),nodeCount,-39,-130,5);
         //generateEndothelial(gridEndothelial.getPtrNano2(typePointer::DEVICE),nodeCount,-39,-130,5);
