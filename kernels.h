@@ -21,4 +21,6 @@ void cleanEndothelial(nanovdb::FloatGrid * gridEndothelial,uint64_t leafCount);
 void equationEndothelialDiscrete(nanovdb::FloatGrid * grid_source_discrete,nanovdb::FloatGrid * grid_destiny_discrete,nanovdb::FloatGrid* gridDerivativeEndothelial,nanovdb::FloatGrid* gridDerivativeEndothelialWrite,nanovdb::FloatGrid* gridTAF,nanovdb::FloatGrid * gridTipRead,nanovdb::FloatGrid* gridTipWrite,int seed,uint64_t leafCount);
 void branching(nanovdb::FloatGrid* gridEndothelialTip,int leafCount);
 void normalize(nanovdb::FloatGrid * gridTAF,float maxValue, uint64_t leafCount);
+void addMax(nanovdb::FloatGrid * gridTAF, float maxValue,uint64_t leafCount);
+void absolute(nanovdb::FloatGrid * gridTAF, uint64_t leafCount);
 #endif

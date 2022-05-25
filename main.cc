@@ -24,6 +24,7 @@
 #include <cctype>
 #include <random>
 #include <openvdb/tools/PoissonSolver.h>
+#include <cmath>
 
 float computeMeam(nanovdb::FloatGrid * grid){
     float accum = 0.0;
@@ -64,6 +65,28 @@ float computeMax(nanovdb::FloatGrid * grid){
     }
     return max;
 }
+float computeMaxAbs(nanovdb::FloatGrid * grid){
+    float max = -100000.0;
+    int size_lado = 250;
+    int profundidad_total = 150;
+    auto  accessor = grid->getAccessor();
+    nanovdb::Coord coord;
+    
+    for(int i  =0;i>-size_lado;i--){
+            for(int j = 0 ;j>-profundidad_total;j--){
+                for(int k = 0 ;k>-size_lado;k--){
+                    coord = openvdb::Coord(i,j,k);
+                    float aux = accessor.getValue(coord);
+                    
+                    if(std::abs(aux) > std::abs(max)){
+                        max = aux;
+                    }
+                }
+            }
+    }
+    return max;
+}
+
 
 float computeMin(nanovdb::FloatGrid * grid){
     float min = 100000.0;
@@ -240,8 +263,17 @@ int main(int argc,char * argv[]){
     // std::cout<<"Previo a solve"<<std::endl;
     // auto state = openvdb::math::pcg::terminationDefaults<float>();
     // auto tree = gridTAF.getPtrOpen1()->tree();
-    // auto newTree = openvdb::tools::poisson::solve<openvdb::v9_0::FloatTree>(tree,state);
-    // gridTAF.getPtrOpen1()->setTree(newTree->copy());
+    // auto newTree2 = openvdb::tools::poisson::solve<openvdb::v9_0::FloatTree>(tree,state);
+    // gridTAF.getPtrOpen1()->setTree(newTree2->copy());
+
+    // tamanio_tumor = 20;
+    // accessorTAF1 = gridTAF.getAccessorOpen1();
+    // createRectangle(accessorTAF1,esquina_izquierda,tamanio_tumor,-10);
+
+    // state = openvdb::math::pcg::terminationDefaults<float>();
+    // auto tree2 = gridTAF.getPtrOpen1()->tree();
+    // newTree2 = openvdb::tools::poisson::solve<openvdb::v9_0::FloatTree>(tree2,state);
+    // gridTAF.getPtrOpen2()->setTree(newTree2->copy());
     // std::cout<<"Post solve"<<std::endl;
     
     
@@ -325,27 +357,35 @@ int main(int argc,char * argv[]){
 
     engine generator( seed );
     std::uniform_int_distribution< u32 > distribute( 1, nodeCount);
+    
+    openvdb::v9_0::FloatTree::Ptr newTree;
     for(int i = 0 ;i<veces;i++){
         std::cout<<i<<std::endl;
-        if(i>0){
+        bool condition = true || i%5 == 0 ;
+        if(condition){
+            if(i>0){
             gridTAF.download();
             gridTAF.copyNanoToOpen();
-        }
-        
-        auto state = openvdb::math::pcg::terminationDefaults<float>();
-        
-        if(i%2==0){
-            auto tree = gridTAF.getPtrOpen1()->tree();
-            auto newTree = openvdb::tools::poisson::solve<openvdb::v9_0::FloatTree>(tree,state);
-            gridTAF.getPtrOpen1()->setTree(newTree->copy());
+            }
+            
+            auto state = openvdb::math::pcg::terminationDefaults<float>();
+            
+            if(i%2==0){
+                auto tree = gridTAF.getPtrOpen1()->tree();
+                newTree = openvdb::tools::poisson::solve<openvdb::v9_0::FloatTree>(tree,state);
+                gridTAF.getPtrOpen1()->setTree(newTree->copy());
 
-        }else{
-            auto tree = gridTAF.getPtrOpen2()->tree();
-            auto newTree = openvdb::tools::poisson::solve<openvdb::v9_0::FloatTree>(tree,state);
-            gridTAF.getPtrOpen2()->setTree(newTree->copy());
+            }else{
+                auto tree = gridTAF.getPtrOpen2()->tree();
+                newTree = openvdb::tools::poisson::solve<openvdb::v9_0::FloatTree>(tree,state);
+                gridTAF.getPtrOpen2()->setTree(newTree->copy());
+
+            }
+            gridTAF.upload();
+            
+            
 
         }
-        gridTAF.upload();
         if(i % 2 == 0 ){
             gridRead = gridEndothelialDiscrete.getPtrNano1(typePointer::DEVICE);
             gridWrite = gridEndothelialDiscrete.getPtrNano2(typePointer::DEVICE);
@@ -376,6 +416,9 @@ int main(int argc,char * argv[]){
             gridReadTAF = gridTAF.getPtrNano2(typePointer::DEVICE);
             gridWriteTAF = gridTAF.getPtrNano1(typePointer::DEVICE);
 
+            gridReadTAF_CPU = gridTAF.getPtrNano2(typePointer::CPU);
+            gridWriteTAF_CPU = gridTAF.getPtrNano1(typePointer::CPU);
+
             gridReadFibronectin = gridFibronectin.getPtrNano2(typePointer::DEVICE);
             gridWriteFibtronectin = gridFibronectin.getPtrNano1(typePointer::DEVICE);
             
@@ -389,13 +432,18 @@ int main(int argc,char * argv[]){
             endothelialContinueWrite = gridEndothelial.getPtrNano1(typePointer::DEVICE);
 
         }
-
-        
-
-        if(true || i == 0 ){
-            normalize(gridReadTAF,computeMin(gridReadTAF_CPU),nodeCount);
-
+        if(condition){
+            float maxAbs = computeMaxAbs(gridReadTAF_CPU);
+            float max = computeMax(gridReadTAF_CPU);
+            if(maxAbs < 0 ){
+                absolute(gridReadTAF,nodeCount);
+                maxAbs = -maxAbs;
+            }
+            //addMax(gridReadTAF,maxAbs,nodeCount);
+            normalize(gridReadTAF,maxAbs,nodeCount);
         }
+        
+        
         product(gridReadTAF,endothelialContinueRead,gridTAFEndothelial.getPtrNano1(typePointer::DEVICE),nodeCount);
         equationMDE(endothelialContinueRead,gridReadMDE,gridWriteMDE,nodeCount);
         equationFibronectin(endothelialContinueRead,gridReadFibronectin,gridReadMDE,gridWriteFibtronectin,nodeCount);
@@ -462,6 +510,7 @@ int main(int argc,char * argv[]){
     writeVector(vector_medias_diver_Fibronectin,"mediasDiverFibronectin.txt");
     writeVector(vector_max,"maxEndothelial.txt");
     //gridVectorPrueba.download();
+    std::cout<<"Hola"<<std::endl;
     gridTAF.download();
     gridFibronectin.download();
     gridGradienteFibronectin.download();
@@ -477,7 +526,7 @@ int main(int argc,char * argv[]){
     gridEndothelialDiscrete.copyNanoToOpen();
     gridTipEndothelial.copyNanoToOpen();
     gridTAF.copyNanoToOpen();
-    
+    std::cout<<"Hola2"<<std::endl;
     gridGradienteEndothelial.copyNanoToOpen();
     gridGradienteFibronectin.copyNanoToOpen();
     gridGradienteTAF.copyNanoToOpen();
@@ -488,6 +537,7 @@ int main(int argc,char * argv[]){
     gridEndothelial.copyNanoToOpen();
     gridFibronectin.copyNanoToOpen();
     gridTAFEndothelial.copyNanoToOpen();
+    std::cout<<"Hola3"<<std::endl;
     
     //std::cout<<"Copy post"<<std::endl;
     gridEndothelial.writeToFile("../grids/Endothelial.vdb"); 
@@ -503,8 +553,8 @@ int main(int argc,char * argv[]){
     gridTipEndothelial.writeToFile("../grids/TipEndothelial.vdb");
     gridEndothelialDiscrete.writeToFile("../grids/EndothelialDiscrete.vdb");
 
-    std::cout<<"Max "<<computeMax(gridTAF.getPtrNano1(typePointer::CPU))<<std::endl;
-    std::cout<<"Min "<<computeMin(gridTAF.getPtrNano1(typePointer::CPU))<<std::endl;
+    // std::cout<<"Max "<<computeMax(gridTAF.getPtrNano1(typePointer::CPU))<<std::endl;
+    // std::cout<<"Min "<<computeMin(gridTAF.getPtrNano1(typePointer::CPU))<<std::endl;
 
     return 0;
 

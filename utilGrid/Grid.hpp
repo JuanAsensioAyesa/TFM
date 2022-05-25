@@ -291,6 +291,14 @@ class Grid{
             }
         }
         
+        void uploadOne(int which){
+            switch(which){
+                case 1:
+                    break;
+                case 2:
+                    break;
+            };
+        }
 };
 
 #endif

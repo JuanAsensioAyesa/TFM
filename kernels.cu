@@ -956,7 +956,52 @@ void normalize(nanovdb::FloatGrid * gridTAF,float maxValue, uint64_t leafCount){
         //auto coord = leaf_d->offsetToGlobalCoord(i);
 
         
-        float new_value = leaf_TAF->getValue(i) / maxValue;
+        float new_value = leaf_TAF->getValue(i);
+        if(maxValue > 0 ){
+            new_value = new_value / maxValue;
+        }
+        leaf_TAF->setValueOnly(i,new_value);
+
+    };
+    thrust::counting_iterator<uint64_t, thrust::device_system_tag> iter(0);
+    thrust::for_each(iter, iter + 512*leafCount, kernel);
+}
+void addMax(nanovdb::FloatGrid * gridTAF, float maxValue,uint64_t leafCount){
+    auto kernel = [gridTAF,maxValue] __device__ (const uint64_t n) {
+       // auto *leaf_d = grid_d->tree().getFirstNode<0>() + (n >> 9);// this only works if grid->isSequential<0>() == true
+        auto *leaf_TAF = gridTAF->tree().getFirstNode<0>() + (n >> 9);// this only works if grid->isSequential<0>() == true
+        //auto *leaf_Endothelial = gridEndothelial->tree().getFirstNode<0>() + (n >> 9);// this only works if grid->isSequential<0>() == true
+
+        const int i = n & 511;
+        
+        //auto coord = leaf_d->offsetToGlobalCoord(i);
+
+        
+        float new_value = leaf_TAF->getValue(i) + maxValue;
+        
+        leaf_TAF->setValueOnly(i,new_value);
+
+    };
+    thrust::counting_iterator<uint64_t, thrust::device_system_tag> iter(0);
+    thrust::for_each(iter, iter + 512*leafCount, kernel);
+}
+
+void absolute(nanovdb::FloatGrid * gridTAF, uint64_t leafCount){
+    auto kernel = [gridTAF] __device__ (const uint64_t n) {
+       // auto *leaf_d = grid_d->tree().getFirstNode<0>() + (n >> 9);// this only works if grid->isSequential<0>() == true
+        auto *leaf_TAF = gridTAF->tree().getFirstNode<0>() + (n >> 9);// this only works if grid->isSequential<0>() == true
+        //auto *leaf_Endothelial = gridEndothelial->tree().getFirstNode<0>() + (n >> 9);// this only works if grid->isSequential<0>() == true
+
+        const int i = n & 511;
+        
+        //auto coord = leaf_d->offsetToGlobalCoord(i);
+
+        
+        float new_value = leaf_TAF->getValue(i) ;
+        if(new_value < 0 ){
+            new_value = -new_value;
+        }
+        
         leaf_TAF->setValueOnly(i,new_value);
 
     };
