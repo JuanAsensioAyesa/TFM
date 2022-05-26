@@ -19,7 +19,7 @@
 
 
 const float threshold_vecino = 0;
-const float time_factor = 6*60; //Timestep de 6 minutos pasado a segundos
+const float time_factor = 6; //Timestep de 6 minutos pasado a segundos
 __device__ const float ini_endothelial = 1.0;
 
 /**
@@ -349,6 +349,7 @@ void equationEndothelial(nanovdb::FloatGrid * grid_s,nanovdb::FloatGrid * grid_d
         //     gradientTAF[index] *= chemotacticSensivity(taf_value);
         // }
         float factorTAF = gradientTAF[0][0] + gradientTAF[1][1] + gradientTAF[2][2];
+        //factorTAF *= old_n;
         //factorTAF *=10;
         //printf("%f  %f  %f\n",gradientTAF[0][0],gradientTAF[1][1],gradientTAF[2][2]);
         
@@ -366,6 +367,7 @@ void equationEndothelial(nanovdb::FloatGrid * grid_s,nanovdb::FloatGrid * grid_d
 
         //float derivative = factorEndothelial  + factorTAF ;//+ factorFibronectin;
         float derivative = factorEndothelial - factorTAF - factorFibronectin;
+        
         // if(derivative > 0 ){
         //     printf("%f\n",derivative);
         // }
@@ -374,12 +376,16 @@ void equationEndothelial(nanovdb::FloatGrid * grid_s,nanovdb::FloatGrid * grid_d
         // }
         //float derivative = -factorTAF;
         auto new_value = old_n + derivative * time_factor;
+        if(derivative != 0){
+            printf("endo:%f taf:%f fibro:%f new:%f\n",factorEndothelial,factorTAF,factorFibronectin,new_value);
+        }
         if(new_value < 0 ){
             new_value = 0 ;
         }
         if(new_value > 1){
             new_value = 1;
         }
+        
         leaf_d->setValueOnly(coord_nano,new_value);//6 minutos //* 60 segundos
         //leaf_d->setValueOnly(coord_nano,derivative);//6 minutos //* 60 segundos
 
@@ -811,8 +817,8 @@ void generateGradientTAF(nanovdb::FloatGrid * gridTAF,nanovdb::FloatGrid * gridT
         //     gradient[1] = 0 ;
         //     gradient[2] = 0;
         // }
-        // if(gradient[0]!=0){
-        //     printf("%f %f\n",sensivity,endothelialValue);
+        // if(gradient[0]!=0 || gradient[1]!=0|| gradient[2]!=0){
+        //     printf("<%f %f %f>  sensivity:%f\n",gradient[0],gradient[1],gradient[2],sensivity);
         // }
         
         
@@ -866,6 +872,9 @@ void divergence(nanovdb::Vec3fGrid *grid_s,nanovdb::FloatGrid *grid_d,uint64_t l
         stencil.moveTo(coord);
         auto gradient = stencil.gradient();
         auto divergence = gradient[0][0]+gradient[1][1] + gradient[2][2];
+        if(gradient[0][0]!= 0 && divergence != 0 ){
+            printf("%f\n",divergence);
+        }
         leaf_d->setValueOnly(coord,divergence);
 
     };
@@ -910,10 +919,15 @@ void product(nanovdb::FloatGrid * gridTAF,nanovdb::FloatGrid * gridEndothelial,n
         const int i = n & 511;
         
         //auto coord = leaf_d->offsetToGlobalCoord(i);
-
+        auto endothelial = leaf_Endothelial->getValue(i);
+        auto taf = leaf_TAF->getValue(i);
+        
         auto new_value = leaf_TAF->getValue(i)*leaf_Endothelial->getValue(i);
+        // if(endothelial != 0){
+        //     printf("end:%f taf:%f newVal:%f\n",endothelial,taf,new_value);
+        // };
         //new_value = leaf_TAF->getValue(i);
-        leaf_d->setValueOnly(i,new_value);
+        leaf_d->setValueOnly(i,-1.0 * new_value);
 
     };
     thrust::counting_iterator<uint64_t, thrust::device_system_tag> iter(0);

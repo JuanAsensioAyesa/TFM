@@ -244,14 +244,14 @@ class Grid{
                     for(int k = 0 ;k>-size_lado;k--){
                         openvdb::Coord coordenadas_open = openvdb::Coord(i,j,k);
                         if constexpr(std::is_same<OpenGridType,float>::value){
-                            accessor_open.setValue(coordenadas_open,dist(e2));
-                            if(createBoth){
-                                accessor_open_2.setValue(coordenadas_open,dist(e2));
-                            }
-                            // accessor_open.setValue(coordenadas_open,i*i*j*j);
+                            // accessor_open.setValue(coordenadas_open,dist(e2));
                             // if(createBoth){
-                            //     accessor_open_2.setValue(coordenadas_open,i*i*j*j);
+                            //     accessor_open_2.setValue(coordenadas_open,dist(e2));
                             // }
+                            accessor_open.setValue(coordenadas_open,size_lado - std::abs(i));
+                            if(createBoth){
+                                accessor_open_2.setValue(coordenadas_open,size_lado - std::abs(i));
+                            }
 
                             //accessor_open.setValue(coordenadas_open,i*i*i);
                             //accessor_open_2.setValue(coordenadas_open,i*i*i);
