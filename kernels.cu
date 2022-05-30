@@ -19,7 +19,7 @@
 
 
 const float threshold_vecino = 0;
-const float time_factor = 6; //Timestep de 6 minutos pasado a segundos
+const float time_factor = 6*60; //Timestep de 6 minutos pasado a segundos
 __device__ const float ini_endothelial = 1.0;
 
 /**
@@ -95,7 +95,7 @@ void equationTAF(nanovdb::FloatGrid* input_grid_endothelial,nanovdb::FloatGrid* 
 
         float n_c = 0.025;
         //printf("%f\n",n_i);
-        esVecino = accessor_endothelial.getValue(coord)>0.0;
+        esVecino = accessor_endothelial.getValue(coord)==1.0;
         if(esVecino){
             n_i = 1.0;
         }else{
@@ -479,7 +479,7 @@ void equationEndothelial(nanovdb::FloatGrid * grid_s,nanovdb::FloatGrid * grid_d
         auto new_value = old_n + derivative * time_factor;
         if(isNextToEndothelialDiscrete(coord_nano,gridTip)){
             if(derivative != 0){
-                printf("endo:%f taf:%f fibro:%f new:%f positionSelf:%d\n",factorEndothelial,factorTAF,factorFibronectin,new_value,positionSelf);
+                //printf("endo:%f taf:%f fibro:%f new:%f positionSelf:%d\n",factorEndothelial,factorTAF,factorFibronectin,new_value,positionSelf);
             }
         }
         
@@ -582,8 +582,8 @@ __device__ bool isMax(nanovdb::Coord coord_self,nanovdb::FloatGrid * endothelial
                     coord_max = new_coord;
                 }
                 if(positionSelf == 1){
-                    printf("desplazamiento %d dimension %d discrete %f value_i %f value_max %f new coord %d %d %d\n",
-                    desplazamiento,dimension,accessor_discrete.getValue(new_coord),value_i,value_max,new_coord[0],new_coord[1],new_coord[2]);
+                    //printf("desplazamiento %d dimension %d discrete %f value_i %f value_max %f new coord %d %d %d\n",
+                    //desplazamiento,dimension,accessor_discrete.getValue(new_coord),value_i,value_max,new_coord[0],new_coord[1],new_coord[2]);
                 }
             }
      
@@ -725,10 +725,15 @@ void equationEndothelialDiscrete(nanovdb::FloatGrid * grid_source_discrete,nanov
             //printf("Next, endothelial: %f ,position:%d , tip left:%f\n",leaf_endothelial_read->getValue(coord_d),positionSelf,tip_left);
 
             if(isMax(coord_d,gridTipRead,gridDerivativeEndothelial,grid_source_discrete)){
-                //printf("Is max %d\n",positionSelf);
+                if(leaf_s->getValue(coord)>0.0){
+                    printf("WTF\n");
+                }
+
+                printf("Is max %d discrete%f\n",positionSelf,leaf_s->getValue(coord));
                 leaf_d->setValue(coord_d,1.0);
                 leaf_tip_write->setValue(coord_d,2.0);
                 leaf_endothelial_write->setValue(coord_d,1.0);
+                
             
             }
             
@@ -800,6 +805,9 @@ void branching(nanovdb::FloatGrid* gridEndothelialTip,int leafCount){
         //float new_value = value-1;
         if(new_value < 0 ){
             new_value =0;
+        }
+        if(new_value != 0.0 && new_value != 1.0){
+            printf("%f\n",new_value);
         }
         leaf_tip->setValue(coord_d,new_value);
 
@@ -964,12 +972,22 @@ void cleanEndothelial(nanovdb::FloatGrid * gridEndothelial,uint64_t leafCount){
         //     printf("%d\n",coord[1]);
         // }
         if(coord[0] == -250 || coord[1] == -150 || coord[2] == -250){
-            leaf_Endothelial->setValueOnly(i,0.00001);
+            //leaf_Endothelial->setValueOnly(i,0.00001);
             leaf_Endothelial->setValueOnly(i,0);
             //printf("Uese\n");
         }
         if(coord[0] == 0 || coord[1] == 0 || coord[2] == 0){
-            leaf_Endothelial->setValueOnly(i,0.00001);
+            //leaf_Endothelial->setValueOnly(i,0.00001);
+            leaf_Endothelial->setValueOnly(i,0);
+            //printf("Uese\n");
+        }
+        if(coord[0] <= -230 || coord[1] <= -130 || coord[2] <= -230){
+            //leaf_Endothelial->setValueOnly(i,0.00001);
+            leaf_Endothelial->setValueOnly(i,0);
+            //printf("Uese\n");
+        }
+        if(coord[0] >= -20 || coord[1] >= -20 || coord[2] >= -20){
+            //leaf_Endothelial->setValueOnly(i,0.00001);
             leaf_Endothelial->setValueOnly(i,0);
             //printf("Uese\n");
         }
@@ -1035,6 +1053,21 @@ void absolute(nanovdb::FloatGrid * gridTAF, uint64_t leafCount){
         
         leaf_TAF->setValueOnly(i,new_value);
 
+    };
+    thrust::counting_iterator<uint64_t, thrust::device_system_tag> iter(0);
+    thrust::for_each(iter, iter + 512*leafCount, kernel);
+}
+
+void regenerateEndothelial(nanovdb::FloatGrid* gridEndothelialContinue,nanovdb::FloatGrid* gridEndothelialDiscrete,u_int64_t leafCount){
+    auto kernel = [gridEndothelialContinue,gridEndothelialDiscrete] __device__ (const uint64_t n) {
+        auto *leaf_Endo = gridEndothelialContinue->tree().getFirstNode<0>() + (n >> 9);
+        auto *leaf_Discrete = gridEndothelialDiscrete->tree().getFirstNode<0>() + (n >> 9);
+        const int i = n & 511;
+        
+        auto coord = leaf_Endo->offsetToGlobalCoord(i);
+        if(leaf_Discrete->getValue(i)>0.0){
+            leaf_Endo->setValue(coord,1.0);
+        }
     };
     thrust::counting_iterator<uint64_t, thrust::device_system_tag> iter(0);
     thrust::for_each(iter, iter + 512*leafCount, kernel);

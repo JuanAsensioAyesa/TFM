@@ -256,6 +256,10 @@ class Grid{
                             // if(createBoth){
                             //     accessor_open_2.setValue(coordenadas_open,0.1);
                             // }
+                            // accessor_open.setValue(coordenadas_open,0.1);
+                            // if(createBoth){
+                            //     accessor_open_2.setValue(coordenadas_open,0.1);
+                            // }
                             // accessor_open.setValue(coordenadas_open,(float(std::abs(i)))/size_lado);
                             // if(createBoth){
                             //     accessor_open_2.setValue(coordenadas_open,(float(std::abs(i)))/size_lado);
@@ -272,8 +276,10 @@ class Grid{
                             float max_value_abs = 200;
                             
                             for(int iVec = 0 ;iVec <3;iVec++){
-                                vec[iVec] = std::min({vec[iVec],max_value_abs});
-                                vec[iVec] = std::max({vec[iVec],-max_value_abs});
+                                // vec[iVec] = std::min({vec[iVec],max_value_abs});
+                                // vec[iVec] = std::max({vec[iVec],-max_value_abs});
+                                vec[iVec] = 0.0;
+                                vec[iVec] = 0.0;
                             }
                             
 

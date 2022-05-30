@@ -451,9 +451,10 @@ int main(int argc,char * argv[]){
         
         if(i == 0 ){
             equationEndothelial(endothelialContinueRead,endothelialContinueRead,gridReadTAF,gridReadFibronectin,gridGradienteTAF.getPtrNano1(typePointer::DEVICE),gridGradienteFibronectin.getPtrNano1(typePointer::DEVICE),gridTip_Read,nodeCount);
-
+            cleanEndothelial(endothelialContinueRead,nodeCount);
         }
-        std::cout<<"First endothelial"<<std::endl;
+        
+        //std::cout<<"First endothelial"<<std::endl;
         product(gridReadTAF,endothelialContinueRead,gridTAFEndothelial.getPtrNano1(typePointer::DEVICE),nodeCount);
         equationMDE(endothelialContinueRead,gridReadMDE,gridWriteMDE,nodeCount);
         equationFibronectin(endothelialContinueRead,gridReadFibronectin,gridReadMDE,gridWriteFibtronectin,nodeCount);
@@ -466,10 +467,11 @@ int main(int argc,char * argv[]){
         equationEndothelialDiscrete(gridRead,gridWrite,endothelialContinueWrite,endothelialContinueWrite,gridReadTAF,gridTip_Read,gridTip_Write,distribute(generator),nodeCount);
         branching(gridTip_Write,nodeCount);
         
-       
+        cleanEndothelial(endothelialContinueWrite,nodeCount);
+        regenerateEndothelial(endothelialContinueWrite,gridRead,nodeCount);
         ////generateEndothelial(gridEndothelial.getPtrNano1(typePointer::DEVICE),nodeCount,-39,-130,5);
         //generateEndothelial(gridEndothelial.getPtrNano2(typePointer::DEVICE),nodeCount,-39,-130,5);
-        cleanEndothelial(gridWrite,nodeCount);
+        
         divergence(gridGradienteTAF.getPtrNano1(typePointer::DEVICE),gridDivergenciaTAF.getPtrNano1(typePointer::DEVICE),nodeCount);
         //divergence(gridGradienteFibronectin.getPtrNano1(typePointer::DEVICE),gridDivergenciaFibronectin.getPtrNano1(typePointer::DEVICE),nodeCount);
         seed = os_seed();
