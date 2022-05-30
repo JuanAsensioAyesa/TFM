@@ -458,7 +458,7 @@ int main(int argc,char * argv[]){
         product(gridReadTAF,endothelialContinueRead,gridTAFEndothelial.getPtrNano1(typePointer::DEVICE),nodeCount);
         equationMDE(endothelialContinueRead,gridReadMDE,gridWriteMDE,nodeCount);
         equationFibronectin(endothelialContinueRead,gridReadFibronectin,gridReadMDE,gridWriteFibtronectin,nodeCount);
-        equationTAF(endothelialContinueRead,gridReadTAF,gridReadTAF,nodeCount);
+        equationTAF(gridRead,gridReadTAF,gridReadTAF,nodeCount);
         generateGradientFibronectin(gridReadFibronectin,gridRead,gridGradienteFibronectin.getPtrNano1(typePointer::DEVICE),nodeCount);
         generateGradientTAF(gridReadTAF,gridTAFEndothelial.getPtrNano1(typePointer::DEVICE),gridGradienteTAF.getPtrNano1(typePointer::DEVICE),nodeCount);
         pruebaGradiente(gridGradienteEndothelial.getPtrNano1(typePointer::DEVICE),gridRead,nodeCount);

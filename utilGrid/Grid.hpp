@@ -260,9 +260,9 @@ class Grid{
                             // if(createBoth){
                             //     accessor_open_2.setValue(coordenadas_open,0.1);
                             // }
-                            // accessor_open.setValue(coordenadas_open,(float(std::abs(i)))/size_lado);
+                            // accessor_open.setValue(coordenadas_open,(float(std::abs(j)))/profundidad_total);
                             // if(createBoth){
-                            //     accessor_open_2.setValue(coordenadas_open,(float(std::abs(i)))/size_lado);
+                            //     accessor_open_2.setValue(coordenadas_open,(float(std::abs(j)))/profundidad_total);
                             // }
                             //accessor_open.setValue(coordenadas_open,i*i*i);
                             //accessor_open_2.setValue(coordenadas_open,i*i*i);
