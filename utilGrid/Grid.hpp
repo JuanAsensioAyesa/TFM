@@ -248,11 +248,18 @@ class Grid{
                             // if(createBoth){
                             //     accessor_open_2.setValue(coordenadas_open,dist(e2));
                             // }
-                            accessor_open.setValue(coordenadas_open,size_lado - std::abs(i));
+                            accessor_open.setValue(coordenadas_open,(float(size_lado) - std::abs(i))/size_lado);
                             if(createBoth){
-                                accessor_open_2.setValue(coordenadas_open,size_lado - std::abs(i));
+                                accessor_open_2.setValue(coordenadas_open,(float(size_lado) - std::abs(i))/size_lado);
                             }
-
+                            // accessor_open.setValue(coordenadas_open,0.1);
+                            // if(createBoth){
+                            //     accessor_open_2.setValue(coordenadas_open,0.1);
+                            // }
+                            // accessor_open.setValue(coordenadas_open,(float(std::abs(i)))/size_lado);
+                            // if(createBoth){
+                            //     accessor_open_2.setValue(coordenadas_open,(float(std::abs(i)))/size_lado);
+                            // }
                             //accessor_open.setValue(coordenadas_open,i*i*i);
                             //accessor_open_2.setValue(coordenadas_open,i*i*i);
                         }else if constexpr(std::is_same<OpenGridType,openvdb::Vec3s>::value){
