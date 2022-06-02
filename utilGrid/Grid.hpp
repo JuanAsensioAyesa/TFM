@@ -252,11 +252,11 @@ class Grid{
                             if(createBoth){
                                 accessor_open_2.setValue(coordenadas_open,(float(size_lado) - std::abs(i))/size_lado);
                             }
-                            // accessor_open.setValue(coordenadas_open,0.1);
+                            // accessor_open.setValue(coordenadas_open,0.0);
                             // if(createBoth){
-                            //     accessor_open_2.setValue(coordenadas_open,0.1);
+                            //     accessor_open_2.setValue(coordenadas_open,0.0);
                             // }
-                            // accessor_open.setValue(coordenadas_open,0.1);
+                            // // accessor_open.setValue(coordenadas_open,0.1);
                             // if(createBoth){
                             //     accessor_open_2.setValue(coordenadas_open,0.1);
                             // }
