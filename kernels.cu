@@ -1132,10 +1132,10 @@ void equationBplusSimple(nanovdb::FloatGrid* gridTumor,nanovdb::FloatGrid* gridB
         
         if(oxygen>oxygenThreshold){
             float c_max = 2.0;
-            float TtcDeath = 100;
+            float TtcProliferation= 10;
             float tumor_cells = leaf_Tumor->getValue(i);
             float new_value = 0 ;
-            new_value = 1.0/TtcDeath * tumor_cells * (1.0-tumor_cells/c_max);
+            new_value = 1.0/TtcProliferation * tumor_cells * (1.0-tumor_cells/c_max);
             leaf_Bplus->setValue(coord,new_value);
         }else{
             leaf_Bplus->setValue(coord,0.0);
@@ -1174,7 +1174,7 @@ void equationBminusSimple(nanovdb::FloatGrid* gridTumor,nanovdb::FloatGrid* grid
     thrust::for_each(iter, iter + 512*leafCount, kernel);
 }
 
-void equationPressureSimple(nanovdb::FloatGrid* gridTumor,nanovdb::FloatGrid* gridPressure,u_int64_t leafCount){
+void equationPressure(nanovdb::FloatGrid* gridTumor,nanovdb::FloatGrid* gridPressure,u_int64_t leafCount){
     auto kernel = [gridTumor,gridPressure] __device__ (const uint64_t n) {
         auto *leaf_Tumor = gridTumor->tree().getFirstNode<0>() + (n >> 9);
         auto *leaf_Pressure = gridPressure->tree().getFirstNode<0>() + (n >> 9);
@@ -1207,11 +1207,13 @@ void equationPressureSimple(nanovdb::FloatGrid* gridTumor,nanovdb::FloatGrid* gr
     thrust::for_each(iter, iter + 512*leafCount, kernel);
 }
 
-void equationTumorSimple(nanovdb::Vec3fGrid* gridFlux,nanovdb::FloatGrid* gridBplus,nanovdb::FloatGrid* gridBminus,u_int64_t leafCount){
-    auto kernel = [gridFlux,gridBplus,gridBminus] __device__ (const uint64_t n) {
+void equationTumorSimple(nanovdb::Vec3fGrid* gridFlux,nanovdb::FloatGrid* gridBplus,nanovdb::FloatGrid* gridBminus,nanovdb::FloatGrid* gridTumorRead,nanovdb::FloatGrid* gridTumorWrite,u_int64_t leafCount){
+    auto kernel = [gridFlux,gridBplus,gridBminus,gridTumorRead,gridTumorWrite] __device__ (const uint64_t n) {
         auto *leaf_Bplus = gridBplus->tree().getFirstNode<0>() + (n >> 9);
         auto *leaf_Bminus = gridBminus->tree().getFirstNode<0>() + (n >> 9);
         auto *leaf_Flux = gridFlux->tree().getFirstNode<0>() + (n >> 9);
+        auto leaf_tumor_read = gridTumorRead->tree().getFirstNode<0>() + (n>>9);
+        auto leaf_tumor_write = gridTumorWrite->tree().getFirstNode<0>() + (n>>9);
 
         const int i = n & 511;
         
@@ -1223,13 +1225,26 @@ void equationTumorSimple(nanovdb::Vec3fGrid* gridFlux,nanovdb::FloatGrid* gridBp
         
         
         stencilNano.moveTo(coord);
-        auto gradiente = stencilNano.gradient();
+        auto gradient = stencilNano.gradient();
+        auto divergence = gradient[0][0]+gradient[1][1] + gradient[2][2];
+        float old_m = leaf_tumor_read->getValue(i);
+        float b_plus = leaf_Bplus->getValue(i);
+        float b_minus = leaf_Bminus->getValue(i);
+        float derivative = -divergence + b_plus + b_minus;
+        float new_value = old_m + derivative * time_factor;
+        if(new_value > 1.0){
+            new_value =1.0 ;
+        }
+        if(new_value < 0.0){
+            new_value  = 0.0;
+        }
+        leaf_tumor_write->setValue(coord,new_value);
     };
     thrust::counting_iterator<uint64_t, thrust::device_system_tag> iter(0);
     thrust::for_each(iter, iter + 512*leafCount, kernel);
 }
 
-void equationFlux(nanovdb::FloatGrid* gridPressure,nanovdb::FloatGrid* gridTumor,nanovdb::Vec3fGrid* gridFlux,u_int64_t leafCount){
+void equationFluxSimple(nanovdb::FloatGrid* gridPressure,nanovdb::FloatGrid* gridTumor,nanovdb::Vec3fGrid* gridFlux,u_int64_t leafCount){
     auto kernel = [gridPressure,gridTumor,gridFlux] __device__ (const uint64_t n) {
         auto *leaf_Pressure = gridPressure->tree().getFirstNode<0>() + (n >> 9);
         auto *leaf_Tumor = gridTumor->tree().getFirstNode<0>() + (n>>9);

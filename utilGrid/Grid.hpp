@@ -304,6 +304,26 @@ class Grid{
             }
         }
         
+        void fillValue(OpenGridType value){
+            auto accessor_open = gridOpen_1_ptr->getAccessor();
+            auto accessor_open_2 = gridOpen_1_ptr->getAccessor();
+            if(createBoth){
+                accessor_open_2 =  gridOpen_2_ptr->getAccessor();
+            }
+             
+            for(int i  =0;i>-size_lado;i--){
+                for(int j = 0 ;j>-profundidad_total;j--){
+                    for(int k = 0 ;k>-size_lado;k--){
+                        openvdb::Coord coordenadas_open = openvdb::Coord(i,j,k);
+                        accessor_open.setValue(coordenadas_open,value);
+                        if(createBoth){
+                            accessor_open_2.setValue(coordenadas_open,value);
+                        }
+                    }
+                }
+            }
+
+        }
         void uploadOne(int which){
             switch(which){
                 case 1:
