@@ -27,4 +27,6 @@ void regenerateEndothelial(nanovdb::FloatGrid* gridEndothelialContinue,nanovdb::
 void equationBplusSimple(nanovdb::FloatGrid* gridTumor,nanovdb::FloatGrid* gridBplus,nanovdb::FloatGrid* gridOxygen,u_int64_t leafCount);
 void equationBminusSimple(nanovdb::FloatGrid* gridTumor,nanovdb::FloatGrid* gridBminus,nanovdb::FloatGrid* gridOxygen,u_int64_t leafCount);
 void equationPressureSimple(nanovdb::FloatGrid* gridTumor,u_int64_t leafCount);
+void equationFlux(nanovdb::FloatGrid* gridPressure,nanovdb::FloatGrid* gridTumor,nanovdb::Vec3fGrid* gridFlux,u_int64_t leafCount);
+void equationTumorSimple(nanovdb::Vec3fGrid* gridFlux,nanovdb::FloatGrid* gridBplus,nanovdb::FloatGrid* gridBminus,u_int64_t leafCount);
 #endif

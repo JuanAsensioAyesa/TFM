@@ -1206,3 +1206,49 @@ void equationPressureSimple(nanovdb::FloatGrid* gridTumor,nanovdb::FloatGrid* gr
     thrust::counting_iterator<uint64_t, thrust::device_system_tag> iter(0);
     thrust::for_each(iter, iter + 512*leafCount, kernel);
 }
+
+void equationTumorSimple(nanovdb::Vec3fGrid* gridFlux,nanovdb::FloatGrid* gridBplus,nanovdb::FloatGrid* gridBminus,u_int64_t leafCount){
+    auto kernel = [gridFlux,gridBplus,gridBminus] __device__ (const uint64_t n) {
+        auto *leaf_Bplus = gridBplus->tree().getFirstNode<0>() + (n >> 9);
+        auto *leaf_Bminus = gridBminus->tree().getFirstNode<0>() + (n >> 9);
+        auto *leaf_Flux = gridFlux->tree().getFirstNode<0>() + (n >> 9);
+
+        const int i = n & 511;
+        
+        auto coord = leaf_Flux->offsetToGlobalCoord(i);
+       
+        
+        nanovdb::CurvatureStencil<nanovdb::Vec3fGrid> stencilNano(*gridFlux);
+        
+        
+        
+        stencilNano.moveTo(coord);
+        auto gradiente = stencilNano.gradient();
+    };
+    thrust::counting_iterator<uint64_t, thrust::device_system_tag> iter(0);
+    thrust::for_each(iter, iter + 512*leafCount, kernel);
+}
+
+void equationFlux(nanovdb::FloatGrid* gridPressure,nanovdb::FloatGrid* gridTumor,nanovdb::Vec3fGrid* gridFlux,u_int64_t leafCount){
+    auto kernel = [gridPressure,gridTumor,gridFlux] __device__ (const uint64_t n) {
+        auto *leaf_Pressure = gridPressure->tree().getFirstNode<0>() + (n >> 9);
+        auto *leaf_Tumor = gridTumor->tree().getFirstNode<0>() + (n>>9);
+        auto *leaf_Flux = gridFlux->tree().getFirstNode<0>() + (n>>9);
+        const int i = n & 511;
+        
+        auto coord = leaf_Tumor->offsetToGlobalCoord(i);
+       
+        nanovdb::CurvatureStencil<nanovdb::FloatGrid> stencilNano(*gridPressure);
+        stencilNano.moveTo(coord);
+        auto gradiente = stencilNano.gradient();
+        float diffussion_coefficient = 1.0;//Esto dependera de cada capa de la piel
+
+
+        float tumor_cells = leaf_Tumor->getValue(i);
+        for(int i = 0;i<3;i++){
+            gradiente[i] *= -diffussion_coefficient * tumor_cells;
+        }
+        leaf_Flux->setValue(coord,gradiente);
+
+    };  
+}
