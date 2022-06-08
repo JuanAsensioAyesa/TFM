@@ -142,6 +142,7 @@ int main(int argc,char * argv[]){
     Grid<> gridTumorCells(250,150,valor_ini);
     Grid<> gridOxygen(250,150,valor_ini,false);
     Grid<> gridPressure(250,150,valor_ini,false);
+    Grid<> gridDeadCells(250,150,valor_ini,false);
     
     openvdb::Vec3s ini = {0.0,0.0,0.0};
     Grid<Vec3,nanovdb::Vec3f,Vec3Open,Vec3Open::Ptr,Vec3Nano> gridGradienteTAF(250,150,ini,false);
@@ -352,7 +353,7 @@ int main(int argc,char * argv[]){
     gridMDE.upload();
     gridGradienteEndothelial.upload();
     gridDivergenciaTAF.upload();
-    gridDivergenciaFibronectin.upload();
+    //gridDivergenciaFibronectin.upload();
     gridTAFEndothelial.upload();
     gridTipEndothelial.upload();
     gridEndothelialDiscrete.upload();
@@ -361,6 +362,7 @@ int main(int argc,char * argv[]){
     gridTumorCells.upload();
     gridOxygen.upload();
     gridPressure.upload();
+    gridDeadCells.upload();
     // int n;
     // std::cin>>n;
     //gridVectorPrueba.upload();
@@ -608,7 +610,7 @@ int main(int argc,char * argv[]){
     gridEndothelial.download();
     gridMDE.download();
     gridDivergenciaTAF.download();
-    gridDivergenciaFibronectin.download();
+    //gridDivergenciaFibronectin.download();
     gridTAFEndothelial.download();
     gridTipEndothelial.download();
     gridEndothelialDiscrete.download();
@@ -617,6 +619,7 @@ int main(int argc,char * argv[]){
     gridTumorCells.download();
     gridOxygen.download();
     gridPressure.download();
+    gridDeadCells.download();
     gridEndothelialDiscrete.copyNanoToOpen();
     gridTipEndothelial.copyNanoToOpen();
     gridTAF.copyNanoToOpen();
@@ -626,7 +629,7 @@ int main(int argc,char * argv[]){
     gridGradienteTAF.copyNanoToOpen();
     gridMDE.copyNanoToOpen();
     gridDivergenciaTAF.copyNanoToOpen();
-    gridDivergenciaFibronectin.copyNanoToOpen();
+    //gridDivergenciaFibronectin.copyNanoToOpen();
     //std::cout<<"Copy pre"<<std::endl;
     gridEndothelial.copyNanoToOpen();
     gridFibronectin.copyNanoToOpen();

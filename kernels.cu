@@ -1116,3 +1116,93 @@ void regenerateEndothelial(nanovdb::FloatGrid* gridEndothelialContinue,nanovdb::
     thrust::counting_iterator<uint64_t, thrust::device_system_tag> iter(0);
     thrust::for_each(iter, iter + 512*leafCount, kernel);
 }
+
+void equationBplusSimple(nanovdb::FloatGrid* gridTumor,nanovdb::FloatGrid* gridBplus,nanovdb::FloatGrid* gridOxygen,u_int64_t leafCount){
+    auto kernel = [gridTumor,gridBplus,gridOxygen] __device__ (const uint64_t n) {
+        auto *leaf_Tumor = gridTumor->tree().getFirstNode<0>() + (n >> 9);
+        auto *leaf_Bplus = gridBplus->tree().getFirstNode<0>() + (n >> 9);
+        auto *leaf_Oxygen = gridOxygen->tree().getFirstNode<0>() + (n >> 9);
+        
+        const int i = n & 511;
+        
+        auto coord = leaf_Tumor->offsetToGlobalCoord(i);
+        float oxygen = leaf_Oxygen->getValue(i);
+        float oxygenThreshold = 0.1;
+        
+        
+        if(oxygen>oxygenThreshold){
+            float c_max = 2.0;
+            float TtcDeath = 100;
+            float tumor_cells = leaf_Tumor->getValue(i);
+            float new_value = 0 ;
+            new_value = 1.0/TtcDeath * tumor_cells * (1.0-tumor_cells/c_max);
+            leaf_Bplus->setValue(coord,new_value);
+        }else{
+            leaf_Bplus->setValue(coord,0.0);
+        }
+
+    };
+    thrust::counting_iterator<uint64_t, thrust::device_system_tag> iter(0);
+    thrust::for_each(iter, iter + 512*leafCount, kernel);
+}
+void equationBminusSimple(nanovdb::FloatGrid* gridTumor,nanovdb::FloatGrid* gridBminus,nanovdb::FloatGrid* gridOxygen,u_int64_t leafCount){
+    auto kernel = [gridTumor,gridBminus,gridOxygen] __device__ (const uint64_t n) {
+        auto *leaf_Tumor = gridTumor->tree().getFirstNode<0>() + (n >> 9);
+        auto *leaf_Bminus = gridBminus->tree().getFirstNode<0>() + (n >> 9);
+        auto *leaf_Oxygen = gridOxygen->tree().getFirstNode<0>() + (n >> 9);
+        
+        const int i = n & 511;
+        
+        auto coord = leaf_Tumor->offsetToGlobalCoord(i);
+        float oxygen = leaf_Oxygen->getValue(i);
+        float oxygenThreshold = 0.01;
+        
+        
+        if(oxygen<oxygenThreshold){
+            float TtcDeath = 100;
+            float tumor_cells = leaf_Tumor->getValue(i);
+            float new_value = 0.0;
+
+            new_value = -1.0/TtcDeath * tumor_cells;
+            leaf_Bminus->setValue(coord,new_value);
+        }else{
+            leaf_Bminus->setValue(coord,0.0);
+        }
+
+    };
+    thrust::counting_iterator<uint64_t, thrust::device_system_tag> iter(0);
+    thrust::for_each(iter, iter + 512*leafCount, kernel);
+}
+
+void equationPressureSimple(nanovdb::FloatGrid* gridTumor,nanovdb::FloatGrid* gridPressure,u_int64_t leafCount){
+    auto kernel = [gridTumor,gridPressure] __device__ (const uint64_t n) {
+        auto *leaf_Tumor = gridTumor->tree().getFirstNode<0>() + (n >> 9);
+        auto *leaf_Pressure = gridPressure->tree().getFirstNode<0>() + (n >> 9);
+
+        const int i = n & 511;
+        
+        auto coord = leaf_Tumor->offsetToGlobalCoord(i);
+       
+
+        float cbNorm = 1.0;
+        float cbMax = 2.0;
+
+        float tumor_cells = leaf_Tumor->getValue(i);
+
+        if(tumor_cells >= cbMax){
+            //Do nothing ????
+            //int a = 0 ;
+        }else if(tumor_cells>=cbNorm){
+            float new_value = 0.0;
+
+            new_value = (tumor_cells - cbNorm)/(cbMax-cbNorm);
+
+            leaf_Pressure->setValue(coord,new_value);
+        }else{
+            leaf_Pressure->setValue(coord,0.0);
+        }
+
+    };
+    thrust::counting_iterator<uint64_t, thrust::device_system_tag> iter(0);
+    thrust::for_each(iter, iter + 512*leafCount, kernel);
+}
