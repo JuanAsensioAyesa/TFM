@@ -117,6 +117,9 @@ void equationTAF(nanovdb::FloatGrid* input_grid_endothelial,nanovdb::FloatGrid* 
         if(new_value >1 ){
             new_value = 1;
         }
+        if(esVecino){
+            new_value = 0;
+        }
         leaf_d->setValueOnly(i,new_value);
         
 
@@ -681,13 +684,8 @@ __device__ void moveRandom(nanovdb::Coord coord_self,nanovdb::FloatGrid* gridEnd
 }
 
 void equationEndothelialDiscrete(nanovdb::FloatGrid * grid_source_discrete,nanovdb::FloatGrid * grid_destiny_discrete,nanovdb::FloatGrid* gridDerivativeEndothelial,nanovdb::FloatGrid* gridDerivativeEndothelialWrite,nanovdb::FloatGrid* gridTAF,nanovdb::FloatGrid * gridTipRead,nanovdb::FloatGrid* gridTipWrite,int seed,uint64_t leafCount){
-    thrust::minstd_rand rng;
-    thrust::default_random_engine randEng;
-    thrust::uniform_real_distribution<float> uniDist;
-    int discard = seed;
-    randEng.discard(discard);
-    float random = uniDist(randEng);
-    auto kernel = [grid_source_discrete,grid_destiny_discrete,gridDerivativeEndothelial,gridDerivativeEndothelialWrite,gridTAF,gridTipRead,gridTipWrite,rng,seed,random] __device__ (const uint64_t n) {
+    
+    auto kernel = [grid_source_discrete,grid_destiny_discrete,gridDerivativeEndothelial,gridDerivativeEndothelialWrite,gridTAF,gridTipRead,gridTipWrite,seed] __device__ (const uint64_t n) {
         auto *leaf_d = grid_destiny_discrete->tree().getFirstNode<0>() + (n >> 9);// this only works if grid->isSequential<0>() == true
         auto *leaf_s = grid_source_discrete->tree().getFirstNode<0>() + (n >> 9);// this only works if grid->isSequential<0>() == true
         auto *leaf_tip_write = gridTipWrite->tree().getFirstNode<0>()+(n>>9);
@@ -696,9 +694,11 @@ void equationEndothelialDiscrete(nanovdb::FloatGrid * grid_source_discrete,nanov
         auto *leaf_endothelial_read = gridDerivativeEndothelial->tree().getFirstNode<0>()+(n>>9);
         //auto *leaf_TAF = gridTAF->tree().getFirstNode<0>() + (n >> 9);
         const int i = n & 511;
+
+        
+
         auto coord = leaf_tip_write->offsetToGlobalCoord(i);
         auto coord_d = leaf_d->offsetToGlobalCoord(i);
-        float vector_probabilidades[] = {0.04,0.06,0.08,0.2};
         //float taf_value = leaf_TAF->getValue(coord);
 
         // if(coord[0] == 0&&coord[1]==0 && coord[2]==0){
@@ -797,16 +797,55 @@ void equationEndothelialDiscrete(nanovdb::FloatGrid * grid_source_discrete,nanov
     thrust::for_each(iter, iter + 512*leafCount, kernel);
 }
 
-void branching(nanovdb::FloatGrid* gridEndothelialTip,int leafCount){
-    auto kernel = [gridEndothelialTip] __device__ (const uint64_t n) {
+void branching(nanovdb::FloatGrid* gridEndothelialTip,nanovdb::FloatGrid* gridTAF,int seed,int leafCount){
+    auto kernel = [gridEndothelialTip,gridTAF,seed] __device__ (const uint64_t n) {
         auto* leaf_tip = gridEndothelialTip->tree().getFirstNode<0>() + (n >> 9);
+        auto* leaf_taf = gridTAF->tree().getFirstNode<0>() + (n >> 9);
         const int i = n & 511;
+
+        thrust::minstd_rand rng;
+        thrust::default_random_engine randEng;
+        thrust::uniform_real_distribution<float> uniDist;
+        int discard = seed+n;
+        randEng.discard(discard);
+        float random = uniDist(randEng);
+
         auto coord_d = leaf_tip->offsetToGlobalCoord(i);
         float value = leaf_tip->getValue(i);
+        float taf_value = leaf_taf->getValue(i);
         float new_value = 1;
-        if(true || i%2==0){
-            new_value = value-1;
+        float vector_probabilidades[] = {0.04,0.06,0.08,0.2};
+        if(value == 1.0){
+            if(taf_value >= 0.8 && random >= 1.0-vector_probabilidades[3]){
+                printf("NEW TIP\n");
+                // leaf_tip_write->setValueOnly(coord,1.0);
+                // leaf_d->setValueOnly(coord,1.0);
+            }else if(taf_value >=0.7 && random >= 1-vector_probabilidades[2] ){
+                printf("NEW TIP\n");
+                // leaf_tip_write->setValueOnly(coord,1.0);
+                // leaf_d->setValueOnly(coord,1.0);
+            }else if(taf_value >= 0.5&& random >= 1-vector_probabilidades[1]){
+                printf("NEW TIP\n");
+                // leaf_tip_write->setValueOnly(coord,1.0);
+                // leaf_d->setValueOnly(coord,1.0);
+            }else if(taf_value >=0.3&& random >= 1-vector_probabilidades[0]){
+                printf("NEW TIP\n");
+                // leaf_tip_write->setValueOnly(coord,1.0);
+                // leaf_d->setValueOnly(coord,1.0);
+            }else{
+                //NO hay branch
+                leaf_tip->setValue(coord_d,0.0);
+                new_value = 0;
+                //leaf_tip->setValueOnly(coord,0.0);
+            }
+        }else{
+            new_value = value -1;
         }
+        
+
+        // if(true || i%2==0){
+        //     new_value = value-1;
+        // }
         //float new_value = value-1;
         if(new_value < 0 ){
             new_value =0;
@@ -814,6 +853,7 @@ void branching(nanovdb::FloatGrid* gridEndothelialTip,int leafCount){
         if(new_value != 0.0 && new_value != 1.0){
             printf("%f\n",new_value);
         }
+        //new_value = random;
         leaf_tip->setValue(coord_d,new_value);
 
         
@@ -979,12 +1019,12 @@ void cleanEndothelial(nanovdb::FloatGrid * gridEndothelial,uint64_t leafCount){
         // }
         if(coord[0] == -250 || coord[1] == -150 || coord[2] == -250){
             //leaf_Endothelial->setValueOnly(i,0.00001);
-            leaf_Endothelial->setValueOnly(i,0.0);
+            leaf_Endothelial->setValueOnly(i,0.1);
             //printf("Uese\n");
         }
         if(coord[0] == 0 || coord[1] == 0 || coord[2] == 0){
             //leaf_Endothelial->setValueOnly(i,0.00001);
-            leaf_Endothelial->setValueOnly(i,0.0);
+            leaf_Endothelial->setValueOnly(i,0.1);
             //printf("Uese\n");
         }
         // if(coord[0] <= -230 || coord[1] <= -130 || coord[2] <= -230){
@@ -1002,8 +1042,8 @@ void cleanEndothelial(nanovdb::FloatGrid * gridEndothelial,uint64_t leafCount){
     thrust::for_each(iter, iter + 512*leafCount, kernel);
 }
 
-void normalize(nanovdb::FloatGrid * gridTAF,float maxValue, uint64_t leafCount){
-    auto kernel = [gridTAF,maxValue] __device__ (const uint64_t n) {
+void normalize(nanovdb::FloatGrid * gridTAF,float maxValue,float prevMax, uint64_t leafCount){
+    auto kernel = [gridTAF,maxValue,prevMax] __device__ (const uint64_t n) {
        // auto *leaf_d = grid_d->tree().getFirstNode<0>() + (n >> 9);// this only works if grid->isSequential<0>() == true
         auto *leaf_TAF = gridTAF->tree().getFirstNode<0>() + (n >> 9);// this only works if grid->isSequential<0>() == true
         //auto *leaf_Endothelial = gridEndothelial->tree().getFirstNode<0>() + (n >> 9);// this only works if grid->isSequential<0>() == true
@@ -1015,7 +1055,7 @@ void normalize(nanovdb::FloatGrid * gridTAF,float maxValue, uint64_t leafCount){
         
         float new_value = leaf_TAF->getValue(i);
         if(maxValue > 0 ){
-            new_value = 1.0 - new_value / maxValue;
+            new_value = (1.0 - new_value / maxValue)*prevMax;
         }
         leaf_TAF->setValueOnly(i,new_value);
 
