@@ -137,10 +137,17 @@ int main(int argc,char * argv[]){
     Grid<> gridDivergenciaTAF(250,150,valor_ini);
     Grid<> gridDivergenciaFibronectin(250,150,valor_ini);
     Grid<> gridTAFEndothelial(250,150,valor_ini);//Tendra el producto de c * n para calcular su gradiente
+    Grid<> gridBplus(250,150,valor_ini,false);
+    Grid<> gridBMinus(250,150,valor_ini,false);
+    Grid<> gridTumorCells(250,150,valor_ini);
+    Grid<> gridOxygen(250,150,valor_ini,false);
+    Grid<> gridPressure(250,150,valor_ini,false);
+    
     openvdb::Vec3s ini = {0.0,0.0,0.0};
     Grid<Vec3,nanovdb::Vec3f,Vec3Open,Vec3Open::Ptr,Vec3Nano> gridGradienteTAF(250,150,ini,false);
     Grid<Vec3,nanovdb::Vec3f,Vec3Open,Vec3Open::Ptr,Vec3Nano> gridGradienteFibronectin(250,150,ini,false);
     Grid<Vec3,nanovdb::Vec3f,Vec3Open,Vec3Open::Ptr,Vec3Nano> gridGradienteEndothelial(250,150,ini,false);
+    Grid<Vec3,nanovdb::Vec3f,Vec3Open,Vec3Open::Ptr,Vec3Nano> gridTummorFlux(250,150,ini,false);
     //Grid<bool,bool,openvdb::BoolGrid,openvdb::BoolGrid::Ptr,nanovdb::BoolGrid> gridTipEndothelial(250,150,false,false);
     Grid<> gridTipEndothelial(250,150,0.0);
     Grid<> gridEndothelialDiscrete(250,150,0.0);//este almacenara la vasculatura como tal, de forma discreta
@@ -225,6 +232,14 @@ int main(int argc,char * argv[]){
     gridGradienteEndothelial.fillRandom();
     gridDivergenciaFibronectin.fillRandom();
     gridTAFEndothelial.fillRandom();
+
+    gridBplus.fillRandom();
+    gridBMinus.fillRandom();
+    gridTumorCells.fillRandom();
+    gridOxygen.fillRandom();
+    gridPressure.fillRandom();
+
+
     // gridEndothelialDiscrete.fillRandom();
     int tamanio_tumor = 30;//Tamanio en voxels
     //tamanio_tumor = 1;
@@ -341,6 +356,11 @@ int main(int argc,char * argv[]){
     gridTAFEndothelial.upload();
     gridTipEndothelial.upload();
     gridEndothelialDiscrete.upload();
+    gridBplus.upload();
+    gridBMinus.upload();
+    gridTumorCells.upload();
+    gridOxygen.upload();
+    gridPressure.upload();
     // int n;
     // std::cin>>n;
     //gridVectorPrueba.upload();
@@ -592,6 +612,11 @@ int main(int argc,char * argv[]){
     gridTAFEndothelial.download();
     gridTipEndothelial.download();
     gridEndothelialDiscrete.download();
+    gridBplus.download();
+    gridBMinus.download();
+    gridTumorCells.download();
+    gridOxygen.download();
+    gridPressure.download();
     gridEndothelialDiscrete.copyNanoToOpen();
     gridTipEndothelial.copyNanoToOpen();
     gridTAF.copyNanoToOpen();
