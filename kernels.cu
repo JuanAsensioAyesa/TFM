@@ -117,9 +117,7 @@ void equationTAF(nanovdb::FloatGrid* input_grid_endothelial,nanovdb::FloatGrid* 
         if(new_value >1 ){
             new_value = 1;
         }
-        if(esVecino){
-            new_value = 0;
-        }
+        
         leaf_d->setValueOnly(i,new_value);
         
 
