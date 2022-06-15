@@ -965,10 +965,13 @@ void laplacian(nanovdb::FloatGrid * grid_s,nanovdb::FloatGrid * grid_d, uint64_t
         stencil.moveTo(coord_nano);
         auto old_value = leaf_s->getValue(i);
         auto laplacian = stencil.laplacian();
+        if(laplacian < 0.0){
+            laplacian=0.0;
+        }
         // if(laplacian!= 0){
         //     printf("%f\n",laplacian);
         // }
-        auto new_value = old_value + laplacian*0.1;
+        auto new_value = old_value + laplacian*0.2;
 
         // if(new_value < 0 ){
         //     new_value = 0;
@@ -1136,6 +1139,9 @@ void equationBplusSimple(nanovdb::FloatGrid* gridTumor,nanovdb::FloatGrid* gridB
             float tumor_cells = leaf_Tumor->getValue(i);
             float new_value = 0 ;
             new_value = 1.0/TtcProliferation * tumor_cells * (1.0-tumor_cells/c_max);
+            // if(new_value > 0.0){
+            //     printf("%f\n",new_value);
+            // }
             leaf_Bplus->setValue(coord,new_value);
         }else{
             leaf_Bplus->setValue(coord,0.0);
@@ -1192,11 +1198,15 @@ void equationPressure(nanovdb::FloatGrid* gridTumor,nanovdb::FloatGrid* gridPres
         if(tumor_cells >= cbMax){
             //Do nothing ????
             //int a = 0 ;
+            float value = leaf_Pressure->getValue(coord);
+            leaf_Pressure->setValue(coord,value);
         }else if(tumor_cells>=cbNorm){
             float new_value = 0.0;
 
             new_value = (tumor_cells - cbNorm)/(cbMax-cbNorm);
-
+            // if(new_value < 0 ){
+            //     new_value = 0.0;
+            // }
             leaf_Pressure->setValue(coord,new_value);
         }else{
             leaf_Pressure->setValue(coord,0.0);
@@ -1227,17 +1237,34 @@ void equationTumorSimple(nanovdb::Vec3fGrid* gridFlux,nanovdb::FloatGrid* gridBp
         stencilNano.moveTo(coord);
         auto gradient = stencilNano.gradient();
         auto divergence = gradient[0][0]+gradient[1][1] + gradient[2][2];
+        auto value_flux = leaf_Flux->getValue(coord);
+        // if(value_flux[0]!=0.0||value_flux[1]!=0.0||value_flux[2]){
+        //     printf("gradient matrix %f %f %f ; %f %f %f ; %f %f %f\n",gradient[0][0],gradient[0][1],gradient[0][2],gradient[1][0],gradient[1][1],
+        //                                                             gradient[1][2],gradient[2][0],gradient[2][1],gradient[2][2]);
+        // }
         float old_m = leaf_tumor_read->getValue(i);
         float b_plus = leaf_Bplus->getValue(i);
         float b_minus = leaf_Bminus->getValue(i);
-        float derivative = -divergence + b_plus + b_minus;
+        float factor_divergence = -divergence;
+        // if(factor_divergence<0){
+        //     factor_divergence = 0 ;
+        // }
+        
+        float derivative = factor_divergence + b_plus ;//+ b_minus;
+        // if(derivative < 0 ) {
+        //     derivative  = 0 ;
+        // }
         float new_value = old_m + derivative * time_factor;
-        if(new_value > 1.0){
-            new_value =1.0 ;
+        if(new_value > 2.0){
+            new_value =2.0 ;
         }
         if(new_value < 0.0){
             new_value  = 0.0;
         }
+        // if(b_plus != 0.0){
+        //     printf("diver:%f plus:%f minus:%f new:%f\n",divergence,b_plus,b_minus,new_value);
+
+        // }
         leaf_tumor_write->setValue(coord,new_value);
     };
     thrust::counting_iterator<uint64_t, thrust::device_system_tag> iter(0);
@@ -1257,13 +1284,36 @@ void equationFluxSimple(nanovdb::FloatGrid* gridPressure,nanovdb::FloatGrid* gri
         stencilNano.moveTo(coord);
         auto gradiente = stencilNano.gradient();
         float diffussion_coefficient = 1.0;//Esto dependera de cada capa de la piel
-
+        // if(leaf_Pressure->getValue(coord)>0.0){
+        //     printf("%f %f %f\n",gradiente[0],gradiente[1],gradiente[2]);
+        // }
 
         float tumor_cells = leaf_Tumor->getValue(i);
         for(int i = 0;i<3;i++){
-            gradiente[i] *= -diffussion_coefficient * tumor_cells;
+            gradiente[i] *= -diffussion_coefficient;//* tumor_cells;
         }
+        // if(gradiente[0]!=0 || gradiente[1] != 0 || gradiente[2]!=0){
+        //     printf("%f %f %f \n",gradiente[0],gradiente[1],gradiente[2]);
+        // }
         leaf_Flux->setValue(coord,gradiente);
 
-    };  
+    };
+    thrust::counting_iterator<uint64_t, thrust::device_system_tag> iter(0);
+    thrust::for_each(iter, iter + 512*leafCount, kernel);
+}
+
+void discretize(nanovdb::FloatGrid* grid,u_int64_t leafCount){
+    auto kernel = [grid] __device__ (const uint64_t n) {
+        auto *leaf = grid->tree().getFirstNode<0>() + (n >> 9);
+        const int i = n & 511;
+        
+        auto coord = leaf->offsetToGlobalCoord(i);
+        float value = leaf->getValue(i);
+        if(value > 0.0){
+            value  = 1.0;
+        }
+        leaf->setValue(coord,value);
+    };
+    thrust::counting_iterator<uint64_t, thrust::device_system_tag> iter(0);
+    thrust::for_each(iter, iter + 512*leafCount, kernel);
 }

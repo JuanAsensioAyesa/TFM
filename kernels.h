@@ -29,4 +29,5 @@ void equationBminusSimple(nanovdb::FloatGrid* gridTumor,nanovdb::FloatGrid* grid
 void equationPressure(nanovdb::FloatGrid* gridTumor,nanovdb::FloatGrid* gridPressure,u_int64_t leafCount);
 void equationFluxSimple(nanovdb::FloatGrid* gridPressure,nanovdb::FloatGrid* gridTumor,nanovdb::Vec3fGrid* gridFlux,u_int64_t leafCount);
 void equationTumorSimple(nanovdb::Vec3fGrid* gridFlux,nanovdb::FloatGrid* gridBplus,nanovdb::FloatGrid* gridBminus,nanovdb::FloatGrid* gridTumorRead,nanovdb::FloatGrid* gridTumorWrite,u_int64_t leafCount);
+void discretize(nanovdb::FloatGrid* grid,u_int64_t leafCount);
 #endif

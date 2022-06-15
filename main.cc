@@ -142,6 +142,7 @@ int main(int argc,char * argv[]){
     Grid<> gridTumorCells(250,150,valor_ini);
     Grid<> gridOxygen(250,150,valor_ini,false);
     Grid<> gridPressure(250,150,valor_ini,false);
+    Grid<> gridPressureLaplacian(250,150,valor_ini,false);
     Grid<> gridDeadCells(250,150,valor_ini,false);
     
     openvdb::Vec3s ini = {0.0,0.0,0.0};
@@ -234,13 +235,15 @@ int main(int argc,char * argv[]){
     gridDivergenciaFibronectin.fillRandom();
     gridTAFEndothelial.fillRandom();
 
+    gridDivergenciaTAF.fillValue(0.0);
     gridBplus.fillValue(0.0);
     gridBMinus.fillValue(0.0);
     gridTumorCells.fillValue(0.0);
     gridOxygen.fillValue(0.6);
-    gridPressure.fillValue(0.0);
+    gridPressure.fillValue(0);
     gridTummorFlux.fillValue(ini);
     gridDeadCells.fillValue(0.0);
+    gridPressureLaplacian.fillValue(0.0);
 
 
     // gridEndothelialDiscrete.fillRandom();
@@ -253,11 +256,15 @@ int main(int argc,char * argv[]){
     openvdb::FloatGrid::Accessor accessorTAF2 = gridTAF.getAccessorOpen2();
     openvdb::FloatGrid::Accessor accessorTummor1 = gridTumorCells.getAccessorOpen1();
     openvdb::FloatGrid::Accessor accessorTummor2 = gridTumorCells.getAccessorOpen2();
+    openvdb::FloatGrid::Accessor accessorPressure1 = gridPressure.getAccessorOpen1();
+    //openvdb::FloatGrid::Accessor accessorPressure2 = gridPressure.getAccessorOpen2();
     
     tamanio_tumor = 1;
     createRectangle(accessorTummor1,esquina_izquierda,tamanio_tumor,1.0);
     createRectangle(accessorTummor2,esquina_izquierda,tamanio_tumor,1.0);
-
+    tamanio_tumor = 1;
+    //createRectangle(accessorPressure1,esquina_izquierda,tamanio_tumor,10.0);
+    //createRectangle(accessorPressure2,esquina_izquierda,tamanio_tumor,1.0);
     
     //createRectangle(accessor_1_endothelial,esquina_izquierda,tamanio_tumor,1.0);
     //createRectangle(accessor_2_endothelial,esquina_izquierda,tamanio_tumor,1.0);
@@ -351,17 +358,17 @@ int main(int argc,char * argv[]){
     //gridEndothelial.fillRandom();
     //gridVectorPrueba.fillRandom();
     gridEndothelial.upload();
-    gridTAF.upload();
-    gridFibronectin.upload();
-    gridGradienteTAF.upload();
-    gridGradienteFibronectin.upload();
-    gridMDE.upload();
+    // gridTAF.upload();
+    // gridFibronectin.upload();
+    // gridGradienteTAF.upload();
+    // gridGradienteFibronectin.upload();
+    // gridMDE.upload();
     gridGradienteEndothelial.upload();
     gridDivergenciaTAF.upload();
-    //gridDivergenciaFibronectin.upload();
-    gridTAFEndothelial.upload();
-    gridTipEndothelial.upload();
-    gridEndothelialDiscrete.upload();
+    // //gridDivergenciaFibronectin.upload();
+    // gridTAFEndothelial.upload();
+    // gridTipEndothelial.upload();
+    // gridEndothelialDiscrete.upload();
 
     gridBplus.upload();
     gridBMinus.upload();
@@ -369,6 +376,8 @@ int main(int argc,char * argv[]){
     gridOxygen.upload();
     gridPressure.upload();
     gridDeadCells.upload();
+    gridTummorFlux.upload();
+    gridPressureLaplacian.upload();
     // int n;
     // std::cin>>n;
     //gridVectorPrueba.upload();
@@ -550,7 +559,6 @@ int main(int argc,char * argv[]){
 
         // generateGradientFibronectin(gridReadFibronectin,gridRead,gridGradienteFibronectin.getPtrNano1(typePointer::DEVICE),nodeCount);
         // generateGradientTAF(gridReadTAF,gridTAFEndothelial.getPtrNano1(typePointer::DEVICE),gridGradienteTAF.getPtrNano1(typePointer::DEVICE),nodeCount);
-        // // pruebaGradiente(gridGradienteEndothelial.getPtrNano1(typePointer::DEVICE),gridRead,nodeCount);
         // equationEndothelial(endothelialContinueRead,endothelialContinueWrite,gridWriteTAF,gridWriteFibtronectin ,gridGradienteTAF.getPtrNano1(typePointer::DEVICE),gridGradienteFibronectin.getPtrNano1(typePointer::DEVICE),gridTip_Read,nodeCount);
         
         // equationEndothelialDiscrete(gridRead,gridWrite,endothelialContinueRead,endothelialContinueWrite,gridWriteTAF,gridTip_Read,gridTip_Write,distribute(generator),nodeCount);
@@ -567,12 +575,24 @@ int main(int argc,char * argv[]){
         // divergence(gridGradienteTAF.getPtrNano1(typePointer::DEVICE),gridDivergenciaTAF.getPtrNano1(typePointer::DEVICE),nodeCount);
         // //divergence(gridGradienteFibronectin.getPtrNano1(typePointer::DEVICE),gridDivergenciaFibronectin.getPtrNano1(typePointer::DEVICE),nodeCount);
         
-        equationBplusSimple(gridTumorCells.getPtrNano1(typePointer::DEVICE),gridBplus.getPtrNano1(typePointer::DEVICE),gridOxygen.getPtrNano1(typePointer::DEVICE),nodeCount);
-        equationBminusSimple(gridTumorCells.getPtrNano1(typePointer::DEVICE),gridBplus.getPtrNano1(typePointer::DEVICE),gridOxygen.getPtrNano1(typePointer::DEVICE),nodeCount);
-        equationPressure(gridTumorCells.getPtrNano1(typePointer::DEVICE),gridPressure.getPtrNano1(typePointer::DEVICE),nodeCount);
-        equationFluxSimple(gridPressure.getPtrNano1(typePointer::DEVICE),gridTumorCells.getPtrNano1(typePointer::DEVICE),gridTummorFlux.getPtrNano1(typePointer::DEVICE),nodeCount);
-        equationTumorSimple(gridTummorFlux.getPtrNano1(typePointer::DEVICE),gridBplus.getPtrNano1(typePointer::DEVICE),gridBMinus.getPtrNano1(typePointer::DEVICE),tummorCellsRead,tummorCellsWrite,nodeCount);
+        equationBplusSimple(tummorCellsRead,gridBplus.getPtrNano1(typePointer::DEVICE),gridOxygen.getPtrNano1(typePointer::DEVICE),nodeCount);
+        // equationBminusSimple(gridTumorCells.getPtrNano1(typePointer::DEVICE),gridBMinus.getPtrNano1(typePointer::DEVICE),gridOxygen.getPtrNano1(typePointer::DEVICE),nodeCount);
+        equationPressure(tummorCellsRead,gridPressure.getPtrNano1(typePointer::DEVICE),nodeCount);
+        //laplacian(gridPressure.getPtrNano1(typePointer::DEVICE),gridPressureLaplacian.getPtrNano1(typePointer::DEVICE),nodeCount);
+        // for(int j = 0 ;j<10;j++){
+        //      laplacian(gridPressureLaplacian.getPtrNano1(typePointer::DEVICE),gridPressureLaplacian.getPtrNano1(typePointer::DEVICE),nodeCount);
 
+        // }
+        equationFluxSimple(gridPressure.getPtrNano1(typePointer::DEVICE),tummorCellsRead,gridTummorFlux.getPtrNano1(typePointer::DEVICE),nodeCount);
+        pruebaGradiente(gridGradienteEndothelial.getPtrNano1(typePointer::DEVICE),gridPressure.getPtrNano1(typePointer::DEVICE),nodeCount);
+        //divergence(gridGradienteEndothelial.getPtrNano1(typePointer::DEVICE),gridDivergenciaTAF.getPtrNano1(typePointer::DEVICE),nodeCount);
+        divergence(gridTummorFlux.getPtrNano1(typePointer::DEVICE),gridDivergenciaTAF.getPtrNano1(typePointer::DEVICE),nodeCount);
+
+        equationTumorSimple(gridTummorFlux.getPtrNano1(typePointer::DEVICE),gridBplus.getPtrNano1(typePointer::DEVICE),gridBMinus.getPtrNano1(typePointer::DEVICE),tummorCellsRead,tummorCellsWrite,nodeCount);
+        // if(i == veces-1){
+        //     discretize(gridTumorCells.getPtrNano1(typePointer::DEVICE),nodeCount);
+
+        // }
         //gridFibronectin.download();
         // gridTAF.download();
         // gridEndothelial.download();
@@ -640,20 +660,22 @@ int main(int argc,char * argv[]){
     gridOxygen.download();
     gridPressure.download();
     gridDeadCells.download();
-    gridEndothelialDiscrete.copyNanoToOpen();
-    gridTipEndothelial.copyNanoToOpen();
-    gridTAF.copyNanoToOpen();
-    std::cout<<"Hola2"<<std::endl;
+    gridTummorFlux.download();
+    gridPressureLaplacian.download();
+    // gridEndothelialDiscrete.copyNanoToOpen();
+    // gridTipEndothelial.copyNanoToOpen();
+    // gridTAF.copyNanoToOpen();
+    // std::cout<<"Hola2"<<std::endl;
     gridGradienteEndothelial.copyNanoToOpen();
-    gridGradienteFibronectin.copyNanoToOpen();
-    gridGradienteTAF.copyNanoToOpen();
-    gridMDE.copyNanoToOpen();
+    // gridGradienteFibronectin.copyNanoToOpen();
+    // gridGradienteTAF.copyNanoToOpen();
+    // gridMDE.copyNanoToOpen();
     gridDivergenciaTAF.copyNanoToOpen();
-    //gridDivergenciaFibronectin.copyNanoToOpen();
-    //std::cout<<"Copy pre"<<std::endl;
-    gridEndothelial.copyNanoToOpen();
-    gridFibronectin.copyNanoToOpen();
-    gridTAFEndothelial.copyNanoToOpen();
+    // //gridDivergenciaFibronectin.copyNanoToOpen();
+    // //std::cout<<"Copy pre"<<std::endl;
+    // gridEndothelial.copyNanoToOpen();
+    // gridFibronectin.copyNanoToOpen();
+    // gridTAFEndothelial.copyNanoToOpen();
 
     gridBplus.copyNanoToOpen();
     gridBMinus.copyNanoToOpen();
@@ -661,6 +683,8 @@ int main(int argc,char * argv[]){
     gridOxygen.copyNanoToOpen();
     gridPressure.copyNanoToOpen();
     gridDeadCells.copyNanoToOpen();
+    gridTummorFlux.copyNanoToOpen();
+    gridPressureLaplacian.copyNanoToOpen();
 
     std::cout<<"Hola3"<<std::endl;
     
@@ -679,10 +703,12 @@ int main(int argc,char * argv[]){
     gridEndothelialDiscrete.writeToFile("../grids/EndothelialDiscrete.vdb");
     gridBplus.writeToFile("../grids/gridBplus.vdb");
     gridBMinus.writeToFile("../grids/gridBminus.vdb");
-    gridTumorCells.writeToFile("../gridsgridTummorCells.vdb/");
+    gridTumorCells.writeToFile("../grids/gridTummorCells.vdb");
     gridOxygen.writeToFile("../grids/gridOxygen.vdb");
     gridPressure.writeToFile("../grids/gridPressure.vdb");
     gridDeadCells.writeToFile("../grids/gridDeadCells.vdb");
+    gridTummorFlux.writeToFile("../grids/gridTumorFlux.vdb");
+    gridPressureLaplacian.writeToFile("../grids/PressureLaplacian.vdb");
 
 
 
