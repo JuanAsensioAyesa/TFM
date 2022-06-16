@@ -238,7 +238,7 @@ int main(int argc,char * argv[]){
     gridDivergenciaTAF.fillValue(0.0);
     gridBplus.fillValue(0.0);
     gridBMinus.fillValue(0.0);
-    gridTumorCells.fillValue(0.0);
+    gridTumorCells.fillValue(0);
     gridOxygen.fillValue(0.6);
     gridPressure.fillValue(0);
     gridTummorFlux.fillValue(ini);
@@ -262,6 +262,7 @@ int main(int argc,char * argv[]){
     tamanio_tumor = 1;
     createRectangle(accessorTummor1,esquina_izquierda,tamanio_tumor,1.0);
     createRectangle(accessorTummor2,esquina_izquierda,tamanio_tumor,1.0);
+    //gridTumorCells.interpolate();
     tamanio_tumor = 1;
     //createRectangle(accessorPressure1,esquina_izquierda,tamanio_tumor,10.0);
     //createRectangle(accessorPressure2,esquina_izquierda,tamanio_tumor,1.0);
@@ -589,6 +590,7 @@ int main(int argc,char * argv[]){
         divergence(gridTummorFlux.getPtrNano1(typePointer::DEVICE),gridDivergenciaTAF.getPtrNano1(typePointer::DEVICE),nodeCount);
 
         equationTumorSimple(gridTummorFlux.getPtrNano1(typePointer::DEVICE),gridBplus.getPtrNano1(typePointer::DEVICE),gridBMinus.getPtrNano1(typePointer::DEVICE),tummorCellsRead,tummorCellsWrite,nodeCount);
+        //gridTumorCells.interpolate();
         // if(i == veces-1){
         //     discretize(gridTumorCells.getPtrNano1(typePointer::DEVICE),nodeCount);
 

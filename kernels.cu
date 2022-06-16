@@ -1143,6 +1143,7 @@ void equationBplusSimple(nanovdb::FloatGrid* gridTumor,nanovdb::FloatGrid* gridB
             //     printf("%f\n",new_value);
             // }
             leaf_Bplus->setValue(coord,new_value);
+            //leaf_Bplus->setValue(coord,1.0*tumor_cells);
         }else{
             leaf_Bplus->setValue(coord,0.0);
         }
@@ -1199,7 +1200,13 @@ void equationPressure(nanovdb::FloatGrid* gridTumor,nanovdb::FloatGrid* gridPres
             //Do nothing ????
             //int a = 0 ;
             float value = leaf_Pressure->getValue(coord);
-            leaf_Pressure->setValue(coord,value);
+            float new_value = 0.0;
+
+            new_value = (tumor_cells - cbNorm)/(cbMax-cbNorm);
+            // if(value != 0 ){
+            //     printf("%f\n",value);
+            // }
+            leaf_Pressure->setValue(coord,1.0);
         }else if(tumor_cells>=cbNorm){
             float new_value = 0.0;
 
@@ -1249,7 +1256,9 @@ void equationTumorSimple(nanovdb::Vec3fGrid* gridFlux,nanovdb::FloatGrid* gridBp
         // if(factor_divergence<0){
         //     factor_divergence = 0 ;
         // }
-        
+        // if(factor_divergence!=0){
+        //     printf("%f\n",factor_divergence);
+        // }
         float derivative = factor_divergence + b_plus ;//+ b_minus;
         // if(derivative < 0 ) {
         //     derivative  = 0 ;
@@ -1264,6 +1273,9 @@ void equationTumorSimple(nanovdb::Vec3fGrid* gridFlux,nanovdb::FloatGrid* gridBp
         // if(b_plus != 0.0){
         //     printf("diver:%f plus:%f minus:%f new:%f\n",divergence,b_plus,b_minus,new_value);
 
+        // }
+        // if(new_value != 0.0){
+        //     printf("new value tumor:%f\n",new_value);
         // }
         leaf_tumor_write->setValue(coord,new_value);
     };
@@ -1283,7 +1295,7 @@ void equationFluxSimple(nanovdb::FloatGrid* gridPressure,nanovdb::FloatGrid* gri
         nanovdb::CurvatureStencil<nanovdb::FloatGrid> stencilNano(*gridPressure);
         stencilNano.moveTo(coord);
         auto gradiente = stencilNano.gradient();
-        float diffussion_coefficient = 1.0;//Esto dependera de cada capa de la piel
+        float diffussion_coefficient = 0.5;//Esto dependera de cada capa de la piel
         // if(leaf_Pressure->getValue(coord)>0.0){
         //     printf("%f %f %f\n",gradiente[0],gradiente[1],gradiente[2]);
         // }

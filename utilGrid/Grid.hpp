@@ -1,5 +1,7 @@
 #ifndef GRID_HPP
 #define GRID_HPP
+#include <openvdb/openvdb.h>
+#include <openvdb/tools/GridTransformer.h>
 #include <openvdb/tools/ValueTransformer.h>
 #include <openvdb/Types.h>
 #include <iostream>
@@ -331,6 +333,33 @@ class Grid{
                 case 2:
                     break;
             };
+        }
+
+        void interpolate(){ 
+            if constexpr(std::is_same<OpenGridType,float>::value){
+                download();
+                //copyNanoToOpen();
+                openvdb::FloatGrid::Ptr
+                sourceGrid = getPtrOpen1(),
+                targetGrid = getPtrOpen2();
+                const openvdb::math::Transform
+                &sourceXform = sourceGrid->transform(),
+                &targetXform = targetGrid->transform();
+                // Compute a source grid to target grid transform.
+                // (For this example, we assume that both grids' transforms are linear,
+                // so that they can be represented as 4 x 4 matrices.)
+                openvdb::Mat4R xform =
+                    sourceXform.baseMap()->getAffineMap()->getMat4() *
+                    targetXform.baseMap()->getAffineMap()->getMat4().inverse();
+                // Create the transformer.
+                openvdb::tools::GridTransformer transformer(xform);
+                // Resample using nearest-neighbor interpolation.
+                transformer.transformGrid<openvdb::tools::QuadraticSampler, openvdb::FloatGrid>(
+                *sourceGrid, *targetGrid);
+                auto tree = targetGrid->tree();
+                gridOpen_2_ptr->setTree(tree.copy());
+                upload();
+            }
         }
 };
 
