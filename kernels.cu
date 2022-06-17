@@ -397,6 +397,44 @@ __device__ bool  isNextToEndothelial(nanovdb::Coord coord,nanovdb::FloatGrid * i
     }
     return esVecino;
 }
+__device__ float average(nanovdb::Coord coord,nanovdb::FloatGrid * input_grid,uint64_t n){
+    auto accessor_endothelial = input_grid->tree().getAccessor();
+    auto* leaf = input_grid->tree().getFirstNode<0>() + (n >> 9);
+    int desplazamientos[] = {-2,-1,0,1,2};
+    int len_desp = 5;
+    float n_i = 0;
+    bool esVecino = false;
+    float total = 0.0;
+    float accum = 0.0;
+    //Se calcula n_i , que determina si se es vecino de una endothelial
+    //if(accessor_endothelial.getValue(coord)<threshold_vecino){
+    //printf("%d %d %d\n",coord[0],coord[1],coord[2]);
+    for(int dimension = 0 ;dimension <3;dimension++){
+
+        for(int desplazamiento = 0;desplazamiento<len_desp;desplazamiento++){
+            nanovdb::Coord new_coord = coord;
+            new_coord[dimension] += desplazamientos[desplazamiento];
+            if(accessor_endothelial.isActive(new_coord)){
+                float value_i = accessor_endothelial.getValue(new_coord);
+                total++;
+                accum = accum + value_i;
+            }
+            
+            //printf("Position Self %d, new_coord %d %d %d value_i %f\n",positionSelf,new_coord[0],new_coord[1],new_coord[2],value_i);
+            //printf("Value i %f\n",value_i);
+            
+        }
+ 
+    }
+    if(total == 0.0){
+        total = 1.0;
+    }
+    // if(accum > 0.0 ){
+    //     printf("accum: %f\n",accum);
+    // }
+    //return 1;
+    return accum / total;
+}
 __device__ bool isNextToEndothelialDiscrete(nanovdb::Coord coord,nanovdb::FloatGrid * input_grid_endothelial){
     auto accessor_endothelial = input_grid_endothelial->tree().getAccessor();
     int desplazamientos[] = {-1,1};
@@ -1295,14 +1333,14 @@ void equationFluxSimple(nanovdb::FloatGrid* gridPressure,nanovdb::FloatGrid* gri
         nanovdb::CurvatureStencil<nanovdb::FloatGrid> stencilNano(*gridPressure);
         stencilNano.moveTo(coord);
         auto gradiente = stencilNano.gradient();
-        float diffussion_coefficient = 0.5;//Esto dependera de cada capa de la piel
+        float diffussion_coefficient =0.8;//Esto dependera de cada capa de la piel
         // if(leaf_Pressure->getValue(coord)>0.0){
         //     printf("%f %f %f\n",gradiente[0],gradiente[1],gradiente[2]);
         // }
 
         float tumor_cells = leaf_Tumor->getValue(i);
         for(int i = 0;i<3;i++){
-            gradiente[i] *= -diffussion_coefficient;//* tumor_cells;
+            gradiente[i] *= -diffussion_coefficient* tumor_cells;
         }
         // if(gradiente[0]!=0 || gradiente[1] != 0 || gradiente[2]!=0){
         //     printf("%f %f %f \n",gradiente[0],gradiente[1],gradiente[2]);
@@ -1329,3 +1367,30 @@ void discretize(nanovdb::FloatGrid* grid,u_int64_t leafCount){
     thrust::counting_iterator<uint64_t, thrust::device_system_tag> iter(0);
     thrust::for_each(iter, iter + 512*leafCount, kernel);
 }
+void average(nanovdb::FloatGrid* grid,nanovdb::FloatGrid* destiny,u_int64_t leafCount){
+    auto kernel = [grid,destiny] __device__ (const uint64_t n) {
+        auto *leaf = grid->tree().getFirstNode<0>() + (n >> 9);
+        auto *leaf_destiny = destiny->tree().getFirstNode<0>() + (n >> 9);
+        const int i = n & 511;
+        
+        auto coord = leaf->offsetToGlobalCoord(i);
+        float new_value = average(coord,grid,n);
+        
+        leaf_destiny->setValue(coord,new_value);
+    };
+    thrust::counting_iterator<uint64_t, thrust::device_system_tag> iter(0);
+    thrust::for_each(iter, iter + 512*leafCount, kernel);
+}
+void copy(nanovdb::FloatGrid* source ,nanovdb::FloatGrid* destiny,u_int64_t leafCount){
+    auto kernel = [source,destiny] __device__ (const uint64_t n) {
+        auto* leaf_source = source->tree().getFirstNode<0>() + (n >> 9);
+        auto* leaf_destiny = destiny->tree().getFirstNode<0>() + (n >> 9);
+        const int i = n & 511;
+        
+        auto coord = leaf_source->offsetToGlobalCoord(i);
+        leaf_destiny->setValue(coord,leaf_source->getValue(coord));
+    };
+    thrust::counting_iterator<uint64_t, thrust::device_system_tag> iter(0);
+    thrust::for_each(iter, iter + 512*leafCount, kernel);
+}
+

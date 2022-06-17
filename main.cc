@@ -577,19 +577,21 @@ int main(int argc,char * argv[]){
         // //divergence(gridGradienteFibronectin.getPtrNano1(typePointer::DEVICE),gridDivergenciaFibronectin.getPtrNano1(typePointer::DEVICE),nodeCount);
         
         equationBplusSimple(tummorCellsRead,gridBplus.getPtrNano1(typePointer::DEVICE),gridOxygen.getPtrNano1(typePointer::DEVICE),nodeCount);
-        // equationBminusSimple(gridTumorCells.getPtrNano1(typePointer::DEVICE),gridBMinus.getPtrNano1(typePointer::DEVICE),gridOxygen.getPtrNano1(typePointer::DEVICE),nodeCount);
+        // // equationBminusSimple(gridTumorCells.getPtrNano1(typePointer::DEVICE),gridBMinus.getPtrNano1(typePointer::DEVICE),gridOxygen.getPtrNano1(typePointer::DEVICE),nodeCount);
         equationPressure(tummorCellsRead,gridPressure.getPtrNano1(typePointer::DEVICE),nodeCount);
-        //laplacian(gridPressure.getPtrNano1(typePointer::DEVICE),gridPressureLaplacian.getPtrNano1(typePointer::DEVICE),nodeCount);
-        // for(int j = 0 ;j<10;j++){
-        //      laplacian(gridPressureLaplacian.getPtrNano1(typePointer::DEVICE),gridPressureLaplacian.getPtrNano1(typePointer::DEVICE),nodeCount);
+        // //laplacian(gridPressure.getPtrNano1(typePointer::DEVICE),gridPressureLaplacian.getPtrNano1(typePointer::DEVICE),nodeCount);
+        // // for(int j = 0 ;j<10;j++){
+        // //      laplacian(gridPressureLaplacian.getPtrNano1(typePointer::DEVICE),gridPressureLaplacian.getPtrNano1(typePointer::DEVICE),nodeCount);
 
-        // }
+        // // }
         equationFluxSimple(gridPressure.getPtrNano1(typePointer::DEVICE),tummorCellsRead,gridTummorFlux.getPtrNano1(typePointer::DEVICE),nodeCount);
-        pruebaGradiente(gridGradienteEndothelial.getPtrNano1(typePointer::DEVICE),gridPressure.getPtrNano1(typePointer::DEVICE),nodeCount);
-        //divergence(gridGradienteEndothelial.getPtrNano1(typePointer::DEVICE),gridDivergenciaTAF.getPtrNano1(typePointer::DEVICE),nodeCount);
-        divergence(gridTummorFlux.getPtrNano1(typePointer::DEVICE),gridDivergenciaTAF.getPtrNano1(typePointer::DEVICE),nodeCount);
+        // pruebaGradiente(gridGradienteEndothelial.getPtrNano1(typePointer::DEVICE),gridPressure.getPtrNano1(typePointer::DEVICE),nodeCount);
+        // //divergence(gridGradienteEndothelial.getPtrNano1(typePointer::DEVICE),gridDivergenciaTAF.getPtrNano1(typePointer::DEVICE),nodeCount);
+        // divergence(gridTummorFlux.getPtrNano1(typePointer::DEVICE),gridDivergenciaTAF.getPtrNano1(typePointer::DEVICE),nodeCount);
 
         equationTumorSimple(gridTummorFlux.getPtrNano1(typePointer::DEVICE),gridBplus.getPtrNano1(typePointer::DEVICE),gridBMinus.getPtrNano1(typePointer::DEVICE),tummorCellsRead,tummorCellsWrite,nodeCount);
+        average(tummorCellsWrite,gridBplus.getPtrNano1(typePointer::DEVICE),nodeCount);
+        copy(gridBplus.getPtrNano1(typePointer::DEVICE),tummorCellsWrite,nodeCount);
         //gridTumorCells.interpolate();
         // if(i == veces-1){
         //     discretize(gridTumorCells.getPtrNano1(typePointer::DEVICE),nodeCount);
