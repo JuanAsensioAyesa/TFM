@@ -58,8 +58,13 @@ class Grid{
             this->createBoth = createBoth;
             if(!sphere){
                 gridOpen_1_ptr = GridTypeOpen::create(value);
+                gridOpen_1_ptr->setTransform(
+                    openvdb::math::Transform::createLinearTransform(/*voxel size=*/0.05));
                 if(createBoth){
                     gridOpen_2_ptr = GridTypeOpen::create(value);
+                    gridOpen_2_ptr->setTransform(
+                    openvdb::math::Transform::createLinearTransform(/*voxel size=*/0.05));
+                
                 }
             }else{
                 gridOpen_1_ptr = GridTypeOpen::create(value);

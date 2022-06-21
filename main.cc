@@ -590,8 +590,11 @@ int main(int argc,char * argv[]){
         // divergence(gridTummorFlux.getPtrNano1(typePointer::DEVICE),gridDivergenciaTAF.getPtrNano1(typePointer::DEVICE),nodeCount);
 
         equationTumorSimple(gridTummorFlux.getPtrNano1(typePointer::DEVICE),gridBplus.getPtrNano1(typePointer::DEVICE),gridBMinus.getPtrNano1(typePointer::DEVICE),tummorCellsRead,tummorCellsWrite,nodeCount);
-        average(tummorCellsWrite,gridBplus.getPtrNano1(typePointer::DEVICE),nodeCount);
-        copy(gridBplus.getPtrNano1(typePointer::DEVICE),tummorCellsWrite,nodeCount);
+        for(int j = 0 ;j <10 ;j++){
+            average(tummorCellsWrite,gridBplus.getPtrNano1(typePointer::DEVICE),nodeCount);
+            copy(gridBplus.getPtrNano1(typePointer::DEVICE),tummorCellsWrite,nodeCount);
+        }
+        
         //gridTumorCells.interpolate();
         // if(i == veces-1){
         //     discretize(gridTumorCells.getPtrNano1(typePointer::DEVICE),nodeCount);
@@ -602,7 +605,9 @@ int main(int argc,char * argv[]){
         // gridEndothelial.download();
         // vector_medias_Endothelial.push_back(computeMax(gridEndothelial.getPtrNano1(typePointer::CPU)));
         // gridEndothelial.upload();
-
+        // gridTumorCells.download();
+        // vector_max.push_back(computeMax(gridTumorCells.getPtrNano1(typePointer::CPU)));
+        // gridTumorCells.upload();
         // gridMDE.download();
         // vector_medias_MDE.push_back(computeMax(gridMDE.getPtrNano1(typePointer::CPU)));
         // gridMDE.upload();
@@ -643,7 +648,7 @@ int main(int argc,char * argv[]){
     writeVector(vector_medias_TAF,"mediasTAF.txt");
     writeVector(vector_medias_diver_TAF,"mediasDiverTAF.txt");
     writeVector(vector_medias_diver_Fibronectin,"mediasDiverFibronectin.txt");
-    writeVector(vector_max,"maxEndothelial.txt");
+    
     //gridVectorPrueba.download();
     std::cout<<"Hola"<<std::endl;
     gridTAF.download();
@@ -691,7 +696,8 @@ int main(int argc,char * argv[]){
     gridPressureLaplacian.copyNanoToOpen();
 
     std::cout<<"Hola3"<<std::endl;
-    
+    vector_max.push_back(computeMax(gridTumorCells.getPtrNano1(typePointer::CPU)));
+    writeVector(vector_max,"maxTummor.txt");
     //std::cout<<"Copy post"<<std::endl;
     gridEndothelial.writeToFile("../grids/Endothelial.vdb"); 
     gridTAF.writeToFile("../grids/TAF.vdb");

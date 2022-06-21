@@ -400,8 +400,9 @@ __device__ bool  isNextToEndothelial(nanovdb::Coord coord,nanovdb::FloatGrid * i
 __device__ float average(nanovdb::Coord coord,nanovdb::FloatGrid * input_grid,uint64_t n){
     auto accessor_endothelial = input_grid->tree().getAccessor();
     auto* leaf = input_grid->tree().getFirstNode<0>() + (n >> 9);
-    int desplazamientos[] = {-2,-1,0,1,2};
-    int len_desp = 5;
+    //int desplazamientos[] = {-4,-3,-2,-1,0,1,2,3,4};
+    int desplazamientos[] = {-1,0,1};
+    int len_desp = 3;
     float n_i = 0;
     bool esVecino = false;
     float total = 0.0;
@@ -409,23 +410,27 @@ __device__ float average(nanovdb::Coord coord,nanovdb::FloatGrid * input_grid,ui
     //Se calcula n_i , que determina si se es vecino de una endothelial
     //if(accessor_endothelial.getValue(coord)<threshold_vecino){
     //printf("%d %d %d\n",coord[0],coord[1],coord[2]);
+    
+
+    
     for(int dimension = 0 ;dimension <3;dimension++){
 
-        for(int desplazamiento = 0;desplazamiento<len_desp;desplazamiento++){
-            nanovdb::Coord new_coord = coord;
-            new_coord[dimension] += desplazamientos[desplazamiento];
-            if(accessor_endothelial.isActive(new_coord)){
-                float value_i = accessor_endothelial.getValue(new_coord);
-                total++;
-                accum = accum + value_i;
+            for(int desplazamiento = 0;desplazamiento<len_desp;desplazamiento++){
+                nanovdb::Coord new_coord = coord;
+                new_coord[dimension] += desplazamientos[desplazamiento];
+                if(accessor_endothelial.isActive(new_coord)){
+                    float value_i = accessor_endothelial.getValue(new_coord);
+                    total = total + 1.0;
+                    accum = accum + value_i;
+                }
+                
+                //printf("Position Self %d, new_coord %d %d %d value_i %f\n",positionSelf,new_coord[0],new_coord[1],new_coord[2],value_i);
+                //printf("Value i %f\n",value_i);
+                
             }
-            
-            //printf("Position Self %d, new_coord %d %d %d value_i %f\n",positionSelf,new_coord[0],new_coord[1],new_coord[2],value_i);
-            //printf("Value i %f\n",value_i);
-            
+    
         }
- 
-    }
+    
     if(total == 0.0){
         total = 1.0;
     }
@@ -1173,7 +1178,7 @@ void equationBplusSimple(nanovdb::FloatGrid* gridTumor,nanovdb::FloatGrid* gridB
         
         if(oxygen>oxygenThreshold){
             float c_max = 2.0;
-            float TtcProliferation= 10;
+            float TtcProliferation= 10.0 * 5.0;
             float tumor_cells = leaf_Tumor->getValue(i);
             float new_value = 0 ;
             new_value = 1.0/TtcProliferation * tumor_cells * (1.0-tumor_cells/c_max);
@@ -1290,13 +1295,13 @@ void equationTumorSimple(nanovdb::Vec3fGrid* gridFlux,nanovdb::FloatGrid* gridBp
         float old_m = leaf_tumor_read->getValue(i);
         float b_plus = leaf_Bplus->getValue(i);
         float b_minus = leaf_Bminus->getValue(i);
-        float factor_divergence = -divergence;
-        // if(factor_divergence<0){
-        //     factor_divergence = 0 ;
-        // }
-        // if(factor_divergence!=0){
-        //     printf("%f\n",factor_divergence);
-        // }
+        float factor_divergence = -divergence * old_m * 0.000001;
+        if(factor_divergence<0){
+            factor_divergence = 0 ;
+        }
+        if(factor_divergence!=0){
+            printf("%f %f\n",factor_divergence,b_plus);
+        }
         float derivative = factor_divergence + b_plus ;//+ b_minus;
         // if(derivative < 0 ) {
         //     derivative  = 0 ;
@@ -1333,13 +1338,13 @@ void equationFluxSimple(nanovdb::FloatGrid* gridPressure,nanovdb::FloatGrid* gri
         nanovdb::CurvatureStencil<nanovdb::FloatGrid> stencilNano(*gridPressure);
         stencilNano.moveTo(coord);
         auto gradiente = stencilNano.gradient();
-        float diffussion_coefficient =0.8;//Esto dependera de cada capa de la piel
+        float diffussion_coefficient =.1;//Esto dependera de cada capa de la piel
         // if(leaf_Pressure->getValue(coord)>0.0){
         //     printf("%f %f %f\n",gradiente[0],gradiente[1],gradiente[2]);
         // }
 
         float tumor_cells = leaf_Tumor->getValue(i);
-        for(int i = 0;i<3;i++){
+        for(int i = 0;i<0;i++){
             gradiente[i] *= -diffussion_coefficient* tumor_cells;
         }
         // if(gradiente[0]!=0 || gradiente[1] != 0 || gradiente[2]!=0){
