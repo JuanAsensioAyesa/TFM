@@ -1295,13 +1295,13 @@ void equationTumorSimple(nanovdb::Vec3fGrid* gridFlux,nanovdb::FloatGrid* gridBp
         float old_m = leaf_tumor_read->getValue(i);
         float b_plus = leaf_Bplus->getValue(i);
         float b_minus = leaf_Bminus->getValue(i);
-        float factor_divergence = -divergence * old_m * 0.000001;
+        float factor_divergence = -divergence * old_m * 0.0001;
         if(factor_divergence<0){
             factor_divergence = 0 ;
         }
-        if(factor_divergence!=0){
-            printf("%f %f\n",factor_divergence,b_plus);
-        }
+        // if(factor_divergence!=0){
+        //     printf("%f %f\n",factor_divergence,b_plus);
+        // }
         float derivative = factor_divergence + b_plus ;//+ b_minus;
         // if(derivative < 0 ) {
         //     derivative  = 0 ;
@@ -1344,9 +1344,9 @@ void equationFluxSimple(nanovdb::FloatGrid* gridPressure,nanovdb::FloatGrid* gri
         // }
 
         float tumor_cells = leaf_Tumor->getValue(i);
-        for(int i = 0;i<0;i++){
-            gradiente[i] *= -diffussion_coefficient* tumor_cells;
-        }
+        // for(int i = 0;i<3;i++){
+        //     gradiente[i] *= -diffussion_coefficient* tumor_cells;
+        // }
         // if(gradiente[0]!=0 || gradiente[1] != 0 || gradiente[2]!=0){
         //     printf("%f %f %f \n",gradiente[0],gradiente[1],gradiente[2]);
         // }

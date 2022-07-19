@@ -409,8 +409,8 @@ int main(int argc,char * argv[]){
     // var->CoordToOffset
     uint64_t nodeCount = gridEndothelial.getPtrNano1(typePointer::CPU)->tree().nodeCount(0);
     std::cout<<"NodeCount "<<nodeCount<<std::endl;
-    // generateEndothelial(gridEndothelial.getPtrNano1(typePointer::DEVICE),nodeCount,-39,-130,5);
-    // generateEndothelial(gridEndothelial.getPtrNano2(typePointer::DEVICE),nodeCount,-39,-130,5);
+    generateEndothelial(gridEndothelial.getPtrNano1(typePointer::DEVICE),nodeCount,-39,-130,5);
+    generateEndothelial(gridEndothelial.getPtrNano2(typePointer::DEVICE),nodeCount,-39,-130,5);
     
     // generateGradientFibronectin(gridFibronectin.getPtrNano1(typePointer::DEVICE),gridEndothelial.getPtrNano1(typePointer::DEVICE),gridGradienteFibronectin.getPtrNano2(typePointer::DEVICE),nodeCount);
     // generateGradientTAF(gridTAF.getPtrNano1(typePointer::DEVICE),gridEndothelial.getPtrNano1(typePointer::DEVICE),gridGradienteTAF.getPtrNano2(typePointer::DEVICE),nodeCount);
@@ -590,7 +590,7 @@ int main(int argc,char * argv[]){
         // divergence(gridTummorFlux.getPtrNano1(typePointer::DEVICE),gridDivergenciaTAF.getPtrNano1(typePointer::DEVICE),nodeCount);
 
         equationTumorSimple(gridTummorFlux.getPtrNano1(typePointer::DEVICE),gridBplus.getPtrNano1(typePointer::DEVICE),gridBMinus.getPtrNano1(typePointer::DEVICE),tummorCellsRead,tummorCellsWrite,nodeCount);
-        for(int j = 0 ;j <10 ;j++){
+        for(int j = 0 ;j <1 ;j++){
             average(tummorCellsWrite,gridBplus.getPtrNano1(typePointer::DEVICE),nodeCount);
             copy(gridBplus.getPtrNano1(typePointer::DEVICE),tummorCellsWrite,nodeCount);
         }
@@ -682,7 +682,7 @@ int main(int argc,char * argv[]){
     gridDivergenciaTAF.copyNanoToOpen();
     // //gridDivergenciaFibronectin.copyNanoToOpen();
     // //std::cout<<"Copy pre"<<std::endl;
-    // gridEndothelial.copyNanoToOpen();
+    gridEndothelial.copyNanoToOpen();
     // gridFibronectin.copyNanoToOpen();
     // gridTAFEndothelial.copyNanoToOpen();
 
