@@ -239,14 +239,14 @@ int main(int argc,char * argv[]){
     gridBplus.fillValue(0.0);
     gridBMinus.fillValue(0.0);
     gridTumorCells.fillValue(0);
-    gridOxygen.fillValue(0.6);
+    gridOxygen.fillValue(0);
     gridPressure.fillValue(0);
     gridTummorFlux.fillValue(ini);
     gridDeadCells.fillValue(0.0);
     gridPressureLaplacian.fillValue(0.0);
 
 
-    // gridEndothelialDiscrete.fillRandom();
+    gridEndothelialDiscrete.fillValue(0.0);
     int tamanio_tumor = 30;//Tamanio en voxels
     //tamanio_tumor = 1;
     //esquina_izquierda[1]-=20;
@@ -369,7 +369,7 @@ int main(int argc,char * argv[]){
     // //gridDivergenciaFibronectin.upload();
     // gridTAFEndothelial.upload();
     // gridTipEndothelial.upload();
-    // gridEndothelialDiscrete.upload();
+    gridEndothelialDiscrete.upload();
 
     gridBplus.upload();
     gridBMinus.upload();
@@ -409,8 +409,8 @@ int main(int argc,char * argv[]){
     // var->CoordToOffset
     uint64_t nodeCount = gridEndothelial.getPtrNano1(typePointer::CPU)->tree().nodeCount(0);
     std::cout<<"NodeCount "<<nodeCount<<std::endl;
-    generateEndothelial(gridEndothelial.getPtrNano1(typePointer::DEVICE),nodeCount,-39,-130,5);
-    generateEndothelial(gridEndothelial.getPtrNano2(typePointer::DEVICE),nodeCount,-39,-130,5);
+    generateEndothelial(gridEndothelialDiscrete.getPtrNano1(typePointer::DEVICE),nodeCount,-39,-130,5);
+    generateEndothelial(gridEndothelialDiscrete.getPtrNano2(typePointer::DEVICE),nodeCount,-39,-130,5);
     
     // generateGradientFibronectin(gridFibronectin.getPtrNano1(typePointer::DEVICE),gridEndothelial.getPtrNano1(typePointer::DEVICE),gridGradienteFibronectin.getPtrNano2(typePointer::DEVICE),nodeCount);
     // generateGradientTAF(gridTAF.getPtrNano1(typePointer::DEVICE),gridEndothelial.getPtrNano1(typePointer::DEVICE),gridGradienteTAF.getPtrNano2(typePointer::DEVICE),nodeCount);
@@ -451,31 +451,35 @@ int main(int argc,char * argv[]){
         std::cout<<i<<std::endl;
         bool condition = i%30 == 0;
         
-        condition = false;
+        //condition = false;
         float prevMax=1.0;
         if(condition){
             laplacianos++;
             float prevMax=1;
             //if(i>0){
-                gridTAF.download();
-                gridTAF.copyNanoToOpen();
+                gridEndothelialDiscrete.download();
+                gridOxygen.download();
+                gridOxygen.copyNanoToOpen();
+                gridEndothelialDiscrete.copyNanoToOpen();
             //}
-            prevMax = computeMax(gridTAF.getPtrNano1(typePointer::CPU));
+            prevMax = computeMax(gridOxygen.getPtrNano1(typePointer::CPU));
 
             auto state = openvdb::math::pcg::terminationDefaults<float>();prevMax = computeMax(gridReadTAF_CPU);
             
             if(i%2==0){
-                auto tree = gridTAF.getPtrOpen1()->tree();
+                auto tree = gridEndothelialDiscrete.getPtrOpen1()->tree();
                 newTree = openvdb::tools::poisson::solve<openvdb::v9_0::FloatTree>(tree,state);
-                gridTAF.getPtrOpen1()->setTree(newTree->copy());
+                gridOxygen.getPtrOpen1()->setTree(newTree->copy());
 
             }else{
-                auto tree = gridTAF.getPtrOpen2()->tree();
+                auto tree = gridEndothelialDiscrete.getPtrOpen2()->tree();
                 newTree = openvdb::tools::poisson::solve<openvdb::v9_0::FloatTree>(tree,state);
-                gridTAF.getPtrOpen2()->setTree(newTree->copy());
+                gridOxygen.getPtrOpen1()->setTree(newTree->copy());
 
             }
-            gridTAF.upload();
+            
+            gridOxygen.upload();
+            gridEndothelialDiscrete.upload();
             
             
 
@@ -535,16 +539,16 @@ int main(int argc,char * argv[]){
         
         if(condition){
             //float maxAbs = computeMaxAbs(gridReadTAF_CPU);
-            float max = computeMax(gridReadTAF_CPU);
-            float min = computeMin(gridReadTAF_CPU);
+            float max = computeMax(gridOxygen.getPtrNano1(typePointer::CPU));
+            float min = computeMin(gridOxygen.getPtrNano1(typePointer::CPU));
             float addition = max - min;
             float newMax = max + addition;
             // if(maxAbs < 0 ){
             //     absolute(gridReadTAF,nodeCount);
             //     maxAbs = -maxAbs;
             // }
-            addMax(gridReadTAF,addition,nodeCount);
-            normalize(gridReadTAF,newMax,prevMax,nodeCount);
+            addMax(gridOxygen.getPtrNano1(typePointer::DEVICE),addition,nodeCount);
+            normalize(gridOxygen.getPtrNano1(typePointer::DEVICE),newMax,prevMax,nodeCount);
         }
         
         // if(i == 0 ){
