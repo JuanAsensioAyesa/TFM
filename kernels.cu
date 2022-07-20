@@ -34,15 +34,21 @@ void generateEndothelial(nanovdb::FloatGrid *grid_d, uint64_t leafCount, int lim
         
         auto coord_indi = leaf_d->offsetToGlobalCoord(i);
         auto coord = leaf_d->origin();
-        //coord = coord_indi;
+        coord = coord_indi;
         //printf("%d %d %d\n",coord[0],coord[1],coord[2]);
         if(coord[1]>lim_inf && coord[1]<lim_sup){
             if(coord[0]%modulo == 0 && coord[2]%modulo == 0 ){
                 leaf_d->setValueOnly(i,ini_endothelial);
+            }else{
+                leaf_d->setValueOnly(i,leaf_d->getValue(i));
             }
+        }else{
+            leaf_d->setValueOnly(i,leaf_d->getValue(i));
         }
         if(coord_indi[1]==lim_inf || coord_indi[1]==lim_sup){
             leaf_d->setValueOnly(i,ini_endothelial);
+        }else{
+            leaf_d->setValueOnly(i,leaf_d->getValue(i));
         }
         
     };

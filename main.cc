@@ -290,8 +290,6 @@ int main(int argc,char * argv[]){
 
 
     
-    createRectangle(accessor_1_Endothelial_discrete,esquina_izquierda,tamanio_tumor,1);
-    createRectangle(accessor_2_Endothelial_discrete,esquina_izquierda,tamanio_tumor,1);
 
     // esquina_izquierda[0]+=50;
     // esquina_izquierda[1]+=2;
@@ -324,9 +322,14 @@ int main(int argc,char * argv[]){
     //createRectangle(accessor_2_endothelial,esquina_izquierda,tamanio_tumor,1);
 
 
-    
-    // createRectangle(accessor_1_Endothelial_discrete,esquina_izquierda,tamanio_tumor,1);
-    // createRectangle(accessor_2_Endothelial_discrete,esquina_izquierda,tamanio_tumor,1);
+    tamanio_tumor = 10;
+    createRectangle(accessor_1_Endothelial_discrete,esquina_izquierda,tamanio_tumor,1);
+    createRectangle(accessor_2_Endothelial_discrete,esquina_izquierda,tamanio_tumor,1);
+    esquina_izquierda[0]+= 30;
+    createRectangle(accessor_1_Endothelial_discrete,esquina_izquierda,tamanio_tumor,1);
+    createRectangle(accessor_2_Endothelial_discrete,esquina_izquierda,tamanio_tumor,1);
+    //createColumns(accessor_1_Endothelial_discrete,size_lado,profundidad_total);
+    //generateEndoThelial(accessor_1_Endothelial_discrete,size_lado,profundidad_total,-130,-39,5);
     //createRectangle(accessor_2_endothelial,esquina_izquierda,tamanio_tumor,1);
     //createRectangle(accessor_1_MDE,esquina_izquierda,tamanio_tumor,10);
     //createRectangle(accessor_2_MDE,esquina_izquierda,tamanio_tumor,10);
@@ -409,6 +412,8 @@ int main(int argc,char * argv[]){
     // var->CoordToOffset
     uint64_t nodeCount = gridEndothelial.getPtrNano1(typePointer::CPU)->tree().nodeCount(0);
     std::cout<<"NodeCount "<<nodeCount<<std::endl;
+    
+
     generateEndothelial(gridEndothelialDiscrete.getPtrNano1(typePointer::DEVICE),nodeCount,-39,-130,5);
     generateEndothelial(gridEndothelialDiscrete.getPtrNano2(typePointer::DEVICE),nodeCount,-39,-130,5);
     
@@ -474,7 +479,7 @@ int main(int argc,char * argv[]){
             }else{
                 auto tree = gridEndothelialDiscrete.getPtrOpen2()->tree();
                 newTree = openvdb::tools::poisson::solve<openvdb::v9_0::FloatTree>(tree,state);
-                gridOxygen.getPtrOpen1()->setTree(newTree->copy());
+                gridOxygen.getPtrOpen2()->setTree(newTree->copy());
 
             }
             
@@ -482,7 +487,7 @@ int main(int argc,char * argv[]){
             gridEndothelialDiscrete.upload();
             
             
-
+            std::cout<<"Poisson out"<<std::endl;
         }
         if(i % 2 == 0 ){
             gridRead = gridEndothelialDiscrete.getPtrNano1(typePointer::DEVICE);

@@ -129,6 +129,34 @@ void copyNanoToOpen(const nanovdb::FloatGrid* gridNano,openvdb::FloatGrid& gridO
         }
     }
 }
+void generateEndoThelial(openvdb::FloatGrid::Accessor& accessor,int size_lado,int profundidad_total,int lim_inf,int lim_sup,int modulo){
+    
+    float ini_endothelial = 1.0;
+    openvdb::Coord coord;
+    for(int i  =0;i>-size_lado;i--){
+        for(int j = 0 ;j>-profundidad_total;j--){
+            for(int k = 0 ;k>-size_lado;k--){
+                coord = openvdb::Coord(i,j,k);
+                if(coord[1]>lim_inf && coord[1]<lim_sup){
+                    if(coord[0]%modulo == 0 && coord[2]%modulo == 0 ){
+                        accessor.setValueOnly(coord,ini_endothelial);
+                    }else{
+                        accessor.setValueOnly(coord,accessor.getValue(coord));
+                    }
+                }else{
+                    accessor.setValueOnly(coord,accessor.getValue(coord));
+                }
+                if(coord[1]==lim_inf || coord[1]==lim_sup){
+                    accessor.setValueOnly(coord,ini_endothelial);
+                }else{
+                    accessor.setValueOnly(coord,accessor.getValue(coord));
+                }
+                    
+                    
+            }
+        }
+    }
+}
 
 void createRectangle(openvdb::FloatGrid::Accessor& accessor,openvdb::Coord esquinaIzquierda,int size,float new_value){
     //openvdb::FloatGrid::Accessor accessor = grid->getAccessor();
@@ -144,6 +172,23 @@ void createRectangle(openvdb::FloatGrid::Accessor& accessor,openvdb::Coord esqui
                 openvdb::Coord new_coords = openvdb::Coord(esquinaIzquierda[0]+i,esquinaIzquierda[1]+j,esquinaIzquierda[2]+k);
                 //std::cout<<(new_value*new_value)/distancia<<std::endl;
                 accessor.setValue(new_coords,new_value);
+            }
+        }
+    }    
+}
+
+void createColumns(openvdb::FloatGrid::Accessor& accessor,int size_lado,int profundidad_total){
+    //openvdb::FloatGrid::Accessor accessor = grid->getAccessor();
+    float new_value = 1.0;
+    for(int i = 0;i>-size_lado;i--){
+        for(int j = 0;j>-profundidad_total;j--){
+            for(int k = 0 ;k>-size_lado;k--){
+                openvdb::Coord new_coords = openvdb::Coord(i,j,k);
+                //std::cout<<(new_value*new_value)/distancia<<std::endl;
+                if(-new_coords[0] % 2 ==0 ){
+                    accessor.setValue(new_coords,new_value);
+
+                }
             }
         }
     }    
