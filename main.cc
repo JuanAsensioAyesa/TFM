@@ -322,12 +322,12 @@ int main(int argc,char * argv[]){
     //createRectangle(accessor_2_endothelial,esquina_izquierda,tamanio_tumor,1);
 
 
-    tamanio_tumor = 10;
-    createRectangle(accessor_1_Endothelial_discrete,esquina_izquierda,tamanio_tumor,1);
-    createRectangle(accessor_2_Endothelial_discrete,esquina_izquierda,tamanio_tumor,1);
-    esquina_izquierda[0]+= 30;
-    createRectangle(accessor_1_Endothelial_discrete,esquina_izquierda,tamanio_tumor,1);
-    createRectangle(accessor_2_Endothelial_discrete,esquina_izquierda,tamanio_tumor,1);
+    // tamanio_tumor = 10;
+    // createRectangle(accessor_1_Endothelial_discrete,esquina_izquierda,tamanio_tumor,1);
+    // createRectangle(accessor_2_Endothelial_discrete,esquina_izquierda,tamanio_tumor,1);
+    // esquina_izquierda[0]+= 30;
+    // createRectangle(accessor_1_Endothelial_discrete,esquina_izquierda,tamanio_tumor,1);
+    // createRectangle(accessor_2_Endothelial_discrete,esquina_izquierda,tamanio_tumor,1);
     //createColumns(accessor_1_Endothelial_discrete,size_lado,profundidad_total);
     //generateEndoThelial(accessor_1_Endothelial_discrete,size_lado,profundidad_total,-130,-39,5);
     //createRectangle(accessor_2_endothelial,esquina_izquierda,tamanio_tumor,1);

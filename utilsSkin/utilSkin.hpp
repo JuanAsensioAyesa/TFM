@@ -79,20 +79,22 @@ void createSkin(openvdb::FloatGrid::Accessor& accessor,int size_lado,int profund
     int profundidadDermis = profundidad_total - profundidadEpidermis;
 
     std::cout<<"Pre "<<coordenadas<<std::endl;
+    coordenadas[0] = size_lado/2;
+    coordenadas[2] = size_lado/2;
     make_layer(accessor,size_lado,profundidadCorneum,coordenadas,data.valueCorneum,1);
-    coordenadas[0] = 0;
-    coordenadas[2] = 0 ;
+    coordenadas[0] = size_lado/2;
+    coordenadas[2] = size_lado/2;
     make_layer(accessor,size_lado,profundidadSpinosum,coordenadas,data.valueSpinosum,1);
-    coordenadas[0] = 0;
-    coordenadas[2] = 0 ;
+    coordenadas[0] = size_lado/2;
+    coordenadas[2] = size_lado/2;
     make_layer(accessor,size_lado,profundidadBasale,coordenadas,data.valueBasale,1);
-    coordenadas[0] = 0;
-    coordenadas[2] = 0 ;
+    coordenadas[0] = size_lado/2;
+    coordenadas[2] = size_lado/2;
     
     make_layer(accessor,size_lado,profundidadDermis,coordenadas,data.valueDermis,1);
     
-    coordenadas[0] = 0;
-    coordenadas[2] = 0 ;
+    coordenadas[0] = size_lado/2;
+    coordenadas[2] = size_lado/2;
     make_layer(accessor,size_lado,profundidadHipoDermis,coordenadas,data.valueHipoDermis,1);
     std::cout<<"Post "<<coordenadas<<std::endl;
     

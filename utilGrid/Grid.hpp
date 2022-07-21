@@ -194,8 +194,10 @@ class Grid{
             for(int i  =0;i>-size_lado;i--){
                 for(int j = 0 ;j>-profundidad_total;j--){
                     for(int k = 0 ;k>-size_lado;k--){
-                        coordenadas_nano = nanovdb::Coord(i,j,k);
-                        coordenadas_open = openvdb::Coord(i,j,k);
+                        int i_new = i + size_lado / 2.0;
+                        int k_new = k + size_lado /2.0;
+                        coordenadas_nano = nanovdb::Coord(i_new,j,k_new);
+                        coordenadas_open = openvdb::Coord(i_new,j,k_new);
                         if constexpr(std::is_same<OpenGridType,float>::value){
                             if(createBoth){
                                 
@@ -249,7 +251,9 @@ class Grid{
             for(int i  =0;i>-size_lado;i--){
                 for(int j = 0 ;j>-profundidad_total;j--){
                     for(int k = 0 ;k>-size_lado;k--){
-                        openvdb::Coord coordenadas_open = openvdb::Coord(i,j,k);
+                        int i_new = i + size_lado / 2.0;
+                        int k_new = k + size_lado /2.0;
+                        openvdb::Coord coordenadas_open = openvdb::Coord(i_new,j,k_new);
                         if constexpr(std::is_same<OpenGridType,float>::value){
                             // accessor_open.setValue(coordenadas_open,dist(e2));
                             // if(createBoth){
@@ -321,7 +325,9 @@ class Grid{
             for(int i  =0;i>-size_lado;i--){
                 for(int j = 0 ;j>-profundidad_total;j--){
                     for(int k = 0 ;k>-size_lado;k--){
-                        openvdb::Coord coordenadas_open = openvdb::Coord(i,j,k);
+                        int i_new = i + size_lado / 2.0;
+                        int k_new = k + size_lado /2.0;
+                        openvdb::Coord coordenadas_open = openvdb::Coord(i_new,j,k_new);
                         accessor_open.setValue(coordenadas_open,value);
                         if(createBoth){
                             accessor_open_2.setValue(coordenadas_open,value);
