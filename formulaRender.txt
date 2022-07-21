@@ -1,0 +1,3 @@
+K_b * (1-c_m-c_h) + c_m*K_m + c_h*K_h
+Adrián Jarabo Torrijos16:31
+c_m + c_h <= 1
