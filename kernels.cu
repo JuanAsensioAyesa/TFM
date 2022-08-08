@@ -1405,3 +1405,46 @@ void copy(nanovdb::FloatGrid* source ,nanovdb::FloatGrid* destiny,u_int64_t leaf
     thrust::for_each(iter, iter + 512*leafCount, kernel);
 }
 
+void albedoHemogoblin(nanovdb::FloatGrid* oxygen,nanovdb::Vec3fGrid* albedo,u_int64_t leafCount){
+    auto kernel = [oxygen,albedo] __device__ (const uint64_t n) {
+        nanovdb::Vec3f base_color = {1.0,203.0/256.0,190.0/256.0};
+        nanovdb::Vec3f hemoglobin_color = {230.0/256.0,191.0/256.0,170.0/256.0};
+        auto* leaf_Oxygen = oxygen->tree().getFirstNode<0>() + (n >> 9);
+        auto* leaf_Albedo = albedo->tree().getFirstNode<0>() + (n >> 9);
+        const int i = n & 511;
+        
+        auto coord = leaf_Oxygen->offsetToGlobalCoord(i);
+        nanovdb::Vec3f new_color = {0.0,0.0,0.0};
+        for(int i =0 ;i<3;i++){
+            new_color[i] =  base_color[i] - hemoglobin_color[i]* leaf_Oxygen->getValue(coord);
+            if(new_color[i] - 1.0 > 0.0){
+                new_color[i] = 1.0;
+            }
+        }
+        // int coord_abs = coord[0];
+        // if(coord_abs < 0 ){
+        //     coord_abs = -coord_abs;
+        // }
+        // if(coord_abs < 30){
+        //     coord_abs = 0 ;
+
+        // }
+
+        // new_color[0] = (float)coord_abs / 250.0;
+        leaf_Albedo->setValue(coord,new_color);
+    };
+    thrust::counting_iterator<uint64_t, thrust::device_system_tag> iter(0);
+    thrust::for_each(iter, iter + 512*leafCount, kernel);
+}
+
+// void baseSkinColor(nanovdb::FloatGrid* melaninConcentration,nanovdb::Vec3fGrid* skinColor,u_int64_t leafCount){
+//     auto kernel = [melaninConcentration,skinColor] __device__ (const uint64_t n) {
+//         auto* leaf_Melanin = melaninConcentration->tree().getFirstNode<0>() + (n >> 9);
+//         auto* leaf_Skin = skinColor->tree().getFirstNode<0>() + (n >> 9);
+//         const int i = n & 511;
+        
+//         auto coord = leaf_Oxygen->offsetToGlobalCoord(i);
+//     };
+//     thrust::counting_iterator<uint64_t, thrust::device_system_tag> iter(0);
+//     thrust::for_each(iter, iter + 512*leafCount, kernel);
+// }

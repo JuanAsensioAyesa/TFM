@@ -20,6 +20,7 @@
 #include <type_traits>
 #include <random>
 #include <algorithm>
+#include <openvdb/io/File.h>
 
 
 enum typePointer{CPU,DEVICE};
@@ -56,14 +57,15 @@ class Grid{
             this->profundidad_total = profundidad_total;
             this->size_lado = size_lado;
             this->createBoth = createBoth;
+            float voxel_size = 1.0 / (float)size_lado;
             if(!sphere){
                 gridOpen_1_ptr = GridTypeOpen::create(value);
-                // gridOpen_1_ptr->setTransform(
-                //     openvdb::math::Transform::createLinearTransform(/*voxel size=*/0.05));
+                gridOpen_1_ptr->setTransform(
+                    openvdb::math::Transform::createLinearTransform(/*voxel size=*/voxel_size));
                 if(createBoth){
                     gridOpen_2_ptr = GridTypeOpen::create(value);
-                    // gridOpen_2_ptr->setTransform(
-                    // openvdb::math::Transform::createLinearTransform(/*voxel size=*/0.05));
+                    gridOpen_2_ptr->setTransform(
+                    openvdb::math::Transform::createLinearTransform(/*voxel size=*/voxel_size));
                 
                 }
             }else{
@@ -87,6 +89,13 @@ class Grid{
             uploaded = false;
 
         }
+        Grid(std::string filename){
+            uploaded = false;
+            first_upload = true;
+            loadFromFile(filename);
+        }
+
+
 
         std::shared_ptr<GridTypeOpen> getPtrOpen1(){
             return gridOpen_1_ptr;
@@ -129,6 +138,7 @@ class Grid{
                 //std::cout<<"Upload"<<std::endl;
                 if(first_upload){
                     handleNano_1 = nanovdb::openToNanoVDB<nanovdb::CudaDeviceBuffer>(*gridOpen_1_ptr);
+                    
                     if(createBoth){
                         handleNano_2 = nanovdb::openToNanoVDB<nanovdb::CudaDeviceBuffer>(*gridOpen_2_ptr);
                     }
@@ -280,20 +290,23 @@ class Grid{
                         }else if constexpr(std::is_same<OpenGridType,openvdb::Vec3s>::value){
                             openvdb::Vec3s vec;
                             //Para probar bien los gradientes
-                            vec[0] = -(i+2*size_lado/3) * (i +size_lado/3) * (i -size_lado/2);
-                            vec[1]  = -(j+2*profundidad_total/3) * (j +profundidad_total/3) *(j - profundidad_total/2);
-                            vec[2] =  -(k+2*size_lado/3) * (k +size_lado/3) * (k - size_lado/2);
+                            // vec[0] = -(i+2*size_lado/3) * (i +size_lado/3) * (i -size_lado/2);
+                            // vec[1]  = -(j+2*profundidad_total/3) * (j +profundidad_total/3) *(j - profundidad_total/2);
+                            // vec[2] =  -(k+2*size_lado/3) * (k +size_lado/3) * (k - size_lado/2);
 
                             float max_value_abs = 200;
                             
-                            for(int iVec = 0 ;iVec <3;iVec++){
-                                // vec[iVec] = std::min({vec[iVec],max_value_abs});
-                                // vec[iVec] = std::max({vec[iVec],-max_value_abs});
-                                vec[iVec] = 0.0;
-                                vec[iVec] = 0.0;
-                            }
+                            // for(int iVec = 0 ;iVec <3;iVec++){
+                            //     // vec[iVec] = std::min({vec[iVec],max_value_abs});
+                            //     // vec[iVec] = std::max({vec[iVec],-max_value_abs});
+                            //     vec[iVec] = 0.0;
+                            //     vec[iVec] = 0.0;
+                            // }
                             
-
+                            vec[0] = std::abs(i)/std::abs((float)size_lado);
+                            vec[0] =0 ;
+                            vec[1] = 0;
+                            vec[2] = std::abs(k)/std::abs((float)size_lado);
 
                             //vec[0]*=vec[0]*0.001;
                             // vec[1]*=vec[1];
@@ -371,6 +384,33 @@ class Grid{
                 gridOpen_2_ptr->setTree(tree.copy());
                 upload();
             }
+        }
+
+        void loadFromFile(std::string fileName){
+            openvdb::initialize();
+            openvdb::io::File file(fileName);
+            openvdb::GridBase::Ptr baseGrid1;
+            openvdb::GridBase::Ptr baseGrid2;
+
+            file.open();
+            openvdb::v9_0::io::File::NameIterator iterator = file.beginName();
+            int count = 1;
+            for(iterator = file.beginName();iterator != file.endName();++iterator){
+                //std::cout<<iterator.gridName()<<std::endl;
+                if(count == 1){
+                    count++;
+                    baseGrid1 = file.readGrid(iterator.gridName());
+                    gridOpen_1_ptr = openvdb::gridPtrCast<GridTypeOpen>(baseGrid1);
+                }else if(count == 2){
+                    baseGrid2 = file.readGrid(iterator.gridName());
+                    gridOpen_2_ptr = openvdb::gridPtrCast<GridTypeOpen>(baseGrid2);
+
+                }
+            }
+            file.close();
+
+            size_lado = 250;
+            profundidad_total = 150;
         }
 };
 

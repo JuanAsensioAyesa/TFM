@@ -1,0 +1,2 @@
+compilar,convertir y mover a texturas 
+make && ./bin/CONVERTER && ../convertvdb3 ../grids/albedoOxygen.vdb && mv ../grids/albedoOxygen.vol /home/juanasensio/Desktop/mitsuba2/escenas/material-testball/textures

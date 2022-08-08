@@ -119,8 +119,7 @@ void writeVector(std::vector<float>& vec,std::string fileName){
 }
 float valor_ini =  0;
 int main(int argc,char * argv[]){
-    std::cout<<" CORREGIDOS READ/WRITE "<<std::endl;
-    std::cout<<" DISCRETE CAMBIA CONTINUE, INCIAL CONTINUE TODO A 0"<<std::endl;
+    
     /*
         ESTA EN EL PRODUCT NEGADA LA N
     */
@@ -144,6 +143,7 @@ int main(int argc,char * argv[]){
     Grid<> gridPressure(250,150,valor_ini,false);
     Grid<> gridPressureLaplacian(250,150,valor_ini,false);
     Grid<> gridDeadCells(250,150,valor_ini,false);
+    
     
     openvdb::Vec3s ini = {0.0,0.0,0.0};
     Grid<Vec3,nanovdb::Vec3f,Vec3Open,Vec3Open::Ptr,Vec3Nano> gridGradienteTAF(250,150,ini,false);
@@ -226,9 +226,9 @@ int main(int argc,char * argv[]){
     createSkin(accessor_2_endothelial,size_lado,profundidad_total,coordenadas,dataIniEndothelial);
     
     openvdb::Coord esquina_izquierda = openvdb::Coord();
-    esquina_izquierda[0] = -size_lado / 2;
+    esquina_izquierda[0] = 0;
     esquina_izquierda[1] = -profundidad_total/2-20;
-    esquina_izquierda[2] = -size_lado /2;
+    esquina_izquierda[2] = 0;
     gridGradienteFibronectin.fillRandom();
     gridGradienteTAF.fillRandom();
     gridGradienteEndothelial.fillRandom();
@@ -239,7 +239,7 @@ int main(int argc,char * argv[]){
     gridBplus.fillValue(0.0);
     gridBMinus.fillValue(0.0);
     gridTumorCells.fillValue(0);
-    gridOxygen.fillValue(0);
+    gridOxygen.fillValue(0.0);
     gridPressure.fillValue(0);
     gridTummorFlux.fillValue(ini);
     gridDeadCells.fillValue(0.0);
@@ -247,7 +247,7 @@ int main(int argc,char * argv[]){
 
 
     gridEndothelialDiscrete.fillValue(0.0);
-    int tamanio_tumor = 30;//Tamanio en voxels
+    int tamanio_tumor = 60;//Tamanio en voxels
     //tamanio_tumor = 1;
     //esquina_izquierda[1]-=20;
     openvdb::FloatGrid::Accessor accessorFibronectin1 = gridFibronectin.getAccessorOpen1();
@@ -258,6 +258,15 @@ int main(int argc,char * argv[]){
     openvdb::FloatGrid::Accessor accessorTummor2 = gridTumorCells.getAccessorOpen2();
     openvdb::FloatGrid::Accessor accessorPressure1 = gridPressure.getAccessorOpen1();
     //openvdb::FloatGrid::Accessor accessorPressure2 = gridPressure.getAccessorOpen2();
+    openvdb::FloatGrid::Accessor accessorOxygen = gridOxygen.getAccessorOpen1();
+    tamanio_tumor = 60;
+    esquina_izquierda[0]-=20;
+    esquina_izquierda[1] = -60 ;
+    createRectangle(accessor_1_Endothelial_discrete,esquina_izquierda,tamanio_tumor,1.0);
+    createRectangle(accessor_2_Endothelial_discrete,esquina_izquierda,tamanio_tumor,1.0);
+    esquina_izquierda[1] = -150;
+    //createRectangle(accessorOxygen,esquina_izquierda,tamanio_tumor,1.0);
+
     
     tamanio_tumor = 1;
     createRectangle(accessorTummor1,esquina_izquierda,tamanio_tumor,1.0);
@@ -414,8 +423,8 @@ int main(int argc,char * argv[]){
     std::cout<<"NodeCount "<<nodeCount<<std::endl;
     
 
-    generateEndothelial(gridEndothelialDiscrete.getPtrNano1(typePointer::DEVICE),nodeCount,-39,-130,5);
-    generateEndothelial(gridEndothelialDiscrete.getPtrNano2(typePointer::DEVICE),nodeCount,-39,-130,5);
+    // generateEndothelial(gridEndothelialDiscrete.getPtrNano1(typePointer::DEVICE),nodeCount,-39,-130,5);
+    // generateEndothelial(gridEndothelialDiscrete.getPtrNano2(typePointer::DEVICE),nodeCount,-39,-130,5);
     
     // generateGradientFibronectin(gridFibronectin.getPtrNano1(typePointer::DEVICE),gridEndothelial.getPtrNano1(typePointer::DEVICE),gridGradienteFibronectin.getPtrNano2(typePointer::DEVICE),nodeCount);
     // generateGradientTAF(gridTAF.getPtrNano1(typePointer::DEVICE),gridEndothelial.getPtrNano1(typePointer::DEVICE),gridGradienteTAF.getPtrNano2(typePointer::DEVICE),nodeCount);
@@ -541,7 +550,8 @@ int main(int argc,char * argv[]){
             tummorCellsWrite = gridTumorCells.getPtrNano1(typePointer::DEVICE);
 
         }
-        
+        auto voxelSize = gridOxygen.getPtrNano1(typePointer::CPU)->voxelSize();
+        std::cout<<voxelSize[0]<<" "<<voxelSize[1]<<" "<<voxelSize[2]<<std::endl;
         if(condition){
             //float maxAbs = computeMaxAbs(gridReadTAF_CPU);
             float max = computeMax(gridOxygen.getPtrNano1(typePointer::CPU));
