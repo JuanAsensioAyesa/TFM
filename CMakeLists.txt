@@ -33,6 +33,10 @@ add_executable(TFM_CLEAN main_clean.cc kernels.cu ./utilsSkin/utilSkin.hpp ./uti
 add_executable(TFM main.cc kernels.cu ./utilsSkin/utilSkin.hpp ./utilGrid/Grid.hpp)
 add_executable(CONVERTER converter.cc kernels.cu ./utilsSkin/utilSkin.hpp ./utilGrid/Grid.hpp)
 
+target_compile_options(TFM_CLEAN PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:              
+                        
+                        --expt-extended-lambda
+                       >)
 target_compile_options(TFM PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:              
                         
                         --expt-extended-lambda
