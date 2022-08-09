@@ -96,7 +96,9 @@ class Grid{
         }
 
 
-
+        bool getCreateBoth(){
+            return createBoth;
+        }
         std::shared_ptr<GridTypeOpen> getPtrOpen1(){
             return gridOpen_1_ptr;
         };

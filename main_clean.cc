@@ -57,6 +57,37 @@ void writeAll(std::map<std::string,gridClass*>& map){
         it->second->writeToFile("../grids/new/"+it->first+".vdb");
     }
 }
+template<class gridClass,class accessor>
+void getAllAccessor(std::map<std::string,gridClass*>& map,std::map<std::string,accessor>& accessorMap,int accessorNumber = 1){
+    
+    if(accessorNumber == 1){
+        for(auto it = map.begin();it != map.end();it++){
+            accessorMap[it->first] = it->second->getAccessorOpen1();
+        }
+    }else{
+        for(auto it = map.begin();it != map.end();it++){
+            accessorMap[it->first] = it->second->getAccessorOpen2();
+        }
+    }
+}
+template<class gridClass,class accessor>
+void getAllNanoAccessor(std::map<std::string,gridClass*>& map,std::map<std::string,accessor*>& accessorMap,typePointer type,int accessorNumber = 1){
+    if(accessorNumber == 1){
+        for(auto it = map.begin();it != map.end();it++){
+            accessorMap[it->first] = it->second->getPtrNano1(type);
+        }
+    }else{
+        for(auto it = map.begin();it != map.end();it++){
+            if(it->second->getCreateBoth()){
+                accessorMap[it->first] = it->second->getPtrNano2(type);
+
+            }else{
+                accessorMap[it->first] = it->second->getPtrNano1(type);
+
+            }
+        }
+    }
+}
 int main(int argc ,char * argv[]){
     using Vec3 = openvdb::Vec3s;
     using  Vec3Open = openvdb::Vec3SGrid ;
@@ -69,6 +100,9 @@ int main(int argc ,char * argv[]){
     }
     std::map<std::string,Grid<>*> gridsFloat ;
     std::map<std::string,Grid<Vec3,nanovdb::Vec3f,Vec3Open,Vec3Open::Ptr,Vec3Nano>*>gridsVec;
+    std::map<std::string,nanovdb::FloatGrid*> nanoFloatMap1;
+    std::map<std::string,nanovdb::FloatGrid*> nanoFloatMap2;
+    std::map<std::string,nanovdb::Vec3fGrid*> nanoVecMap;
     std::vector<std::string> floatNames = {"Endothelial","TAF","Fibronectin","MDE","TAFEndothelial","Bplus","BMinus","TummorCells","Oxygen",
     "Pressure","PressureLaplacian","DeadCells","TipEndothelial","EndothelialDiscrete"};
     std::vector<std::string> vecNames  = {"GradienteTAF","GradienteFibronectin","GradienteEndothelial","TummorFlux"};
@@ -86,15 +120,39 @@ int main(int argc ,char * argv[]){
     }
     initializeAll<Grid<>,float>(gridsFloat,0.0);
     fillRandomAll<Grid<Vec3,nanovdb::Vec3f,Vec3Open,Vec3Open::Ptr,Vec3Nano>>(gridsVec);
-
     uploadAll<Grid<>>(gridsFloat);
     uploadAll<Grid<Vec3,nanovdb::Vec3f,Vec3Open,Vec3Open::Ptr,Vec3Nano>>(gridsVec);
 
+
+    getAllNanoAccessor<Grid<>,nanovdb::FloatGrid>(gridsFloat,nanoFloatMap1,typePointer::DEVICE,1);
+    getAllNanoAccessor<Grid<>,nanovdb::FloatGrid>(gridsFloat,nanoFloatMap2,typePointer::DEVICE,2);
+    getAllNanoAccessor<Grid<Vec3,nanovdb::Vec3f,Vec3Open,Vec3Open::Ptr,Vec3Nano>,nanovdb::Vec3fGrid>(gridsVec,nanoVecMap,typePointer::DEVICE,1);
+
+    std::map<std::string,nanovdb::FloatGrid*>* gridFloatRead;
+    std::map<std::string,nanovdb::FloatGrid*>* gridFloatWrite;
+    uint64_t nodeCount = gridsFloat["Endothelial"]->getPtrNano1(typePointer::CPU)->tree().nodeCount(0);
+    for(int i = 0 ;i<n_veces;i++){
+        std::cout<<i<<std::endl;
+        if(i%2 == 0 ){
+            gridFloatRead = &nanoFloatMap1;
+            gridFloatWrite = &nanoFloatMap2;
+        }else{
+            gridFloatRead = &nanoFloatMap2;
+            gridFloatWrite = &nanoFloatMap1;
+        }
+        equationMDE(gridFloatRead->at("EndothelialDiscrete"),gridFloatRead->at("MDE"),gridFloatWrite->at("MDE"),nodeCount);
+        // equationFibronectin(gridFloatRead->at("EndothelialDiscrete"),gridFloatRead->at("Fibronectin"),gridFloatRead->at("MDA"),gridFloatWrite->at("Fibronectin"),nodeCount);
+        // equationTAF(gridFloatRead->at("EndothelialDiscrete"),gridFloatRead->at("TAF"),gridFloatWrite->at("TAF"),nodeCount);
+        // product(gridFloatRead->at("TAF"),gridFloatRead->at("Endothelial"),gridFloatRead->at("TAFEndothelial"),nodeCount);
+        // generateGradientFibronectin(gridFloatRead->at("Fibronectin"),gridFloatRead->at("EndothelialDiscrete"),nanoVecMap.at("GradienteFibronectin"),nodeCount);
+        // generateGradientTAF(gridFloatRead->at("TAF"),gridFloatRead->at("TAFEndothelial"),nanoVecMap.at("GradienteTAF"),nodeCount);
+        // equationEndothelial(gridFloatRead->at("EndothelialDiscrete"),gridFloatWrite->at("EndothelialDiscrete"),gridFloatRead->at("TAF"),gridFloatRead->at("Fibronectin"),nanoVecMap.at("GradienteTAF"),nanoVecMap.at("GradienteFibronectin"),gridFloatRead->at("TipEndothelial"),nodeCount);
+
+    }
+
+
     downloadAll<Grid<>>(gridsFloat);
-
     downloadAll<Grid<Vec3,nanovdb::Vec3f,Vec3Open,Vec3Open::Ptr,Vec3Nano>>(gridsVec);
-
-
     copyAll<Grid<Vec3,nanovdb::Vec3f,Vec3Open,Vec3Open::Ptr,Vec3Nano>>(gridsVec);
     copyAll<Grid<>>(gridsFloat);
     writeAll<Grid<>>(gridsFloat);
