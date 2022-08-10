@@ -552,6 +552,55 @@ void equationEndothelial(nanovdb::FloatGrid * grid_s,nanovdb::FloatGrid * grid_d
     thrust::counting_iterator<uint64_t, thrust::device_system_tag> iter(0);
     thrust::for_each(iter, iter + 512*leafCount, kernel);
 }
+void factorTAF(nanovdb::FloatGrid * grid_s,nanovdb::FloatGrid * grid_d,nanovdb::FloatGrid* gridTAF,nanovdb::Vec3fGrid* gradientTAF,uint64_t leafCount){
+    auto kernel = [grid_s,grid_d,gridTAF,gradientTAF] __device__ (const uint64_t n) {
+        auto *leaf_d = grid_d->tree().getFirstNode<0>() + (n >> 9);// this only works if grid->isSequential<0>() == true
+        auto *leaf_s = grid_s->tree().getFirstNode<0>() + (n >> 9);// this only works if grid->isSequential<0>() == true
+        auto *leaf_taf = gridTAF->tree().getFirstNode<0>() + (n >> 9);
+        const int i = n & 511;
+        
+        auto coord = leaf_d->offsetToGlobalCoord(i);
+
+        nanovdb::CurvatureStencil<nanovdb::Vec3fGrid> stencilTAF(*gradientTAF);
+        float old_n = leaf_s->getValue(coord);
+        float current_n = leaf_d->getValue(coord);
+        stencilTAF.moveTo(coord);
+        auto gradientTAF = stencilTAF.gradient();
+        float taf_value = leaf_taf->getValue(coord);
+        for(int index = 0 ;index <3;index++){
+             gradientTAF[index] *= chemotacticSensivity(taf_value);
+             gradientTAF[index] *= old_n;
+        }
+        float factorTAF = gradientTAF[0][0] + gradientTAF[1][1] + gradientTAF[2][2];
+
+        float new_n = current_n - factorTAF;
+        leaf_d->setValueOnly(coord,new_n);
+        
+
+    };
+    thrust::counting_iterator<uint64_t, thrust::device_system_tag> iter(0);
+    thrust::for_each(iter, iter + 512*leafCount, kernel);
+}
+void factorFibronectin(nanovdb::FloatGrid * grid_s,nanovdb::FloatGrid * grid_d,nanovdb::FloatGrid* gridFibronectin,nanovdb::Vec3fGrid* gradientFibronectin,uint64_t leafCount){
+    auto kernel = [grid_s,grid_d,gridFibronectin,gradientFibronectin] __device__ (const uint64_t n) {
+        auto *leaf_d = grid_d->tree().getFirstNode<0>() + (n >> 9);// this only works if grid->isSequential<0>() == true
+        auto *leaf_s = grid_s->tree().getFirstNode<0>() + (n >> 9);// this only works if grid->isSequential<0>() == true
+        auto *leaf_Fibronectin = gridFibronectin->tree().getFirstNode<0>() + (n >> 9);
+        const int i = n & 511;
+        
+        auto coord = leaf_d->offsetToGlobalCoord(i);
+        float current_n = leaf_d->getValue(coord);
+        nanovdb::CurvatureStencil<nanovdb::Vec3fGrid> stencilFibronectin(*gradientFibronectin);
+        stencilFibronectin.moveTo(coord);
+        auto gradientFibronectin = stencilFibronectin.gradient();
+        float factorFibronectin = gradientFibronectin[0][0] + gradientFibronectin[1][1] + gradientFibronectin[2][2];
+        factorFibronectin = factorFibronectin * 0.28;
+        leaf_d->setValueOnly(coord,current_n-factorFibronectin);
+
+    };
+    thrust::counting_iterator<uint64_t, thrust::device_system_tag> iter(0);
+    thrust::for_each(iter, iter + 512*leafCount, kernel);
+}
 __device__ float computeEndothelial(nanovdb::Coord coord_nano,nanovdb::CurvatureStencil<nanovdb::FloatGrid>& stencilEndothelial,nanovdb::CurvatureStencil<nanovdb::Vec3fGrid> &stencilTAF,nanovdb::CurvatureStencil<nanovdb::Vec3fGrid>& stencilFibronectin){
     /*
     Primera parte: Difusion aleatoria
