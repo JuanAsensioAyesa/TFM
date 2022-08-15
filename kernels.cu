@@ -552,6 +552,27 @@ void equationEndothelial(nanovdb::FloatGrid * grid_s,nanovdb::FloatGrid * grid_d
     thrust::counting_iterator<uint64_t, thrust::device_system_tag> iter(0);
     thrust::for_each(iter, iter + 512*leafCount, kernel);
 }
+void factorEndothelial(nanovdb::FloatGrid * grid_s,nanovdb::FloatGrid * grid_d,uint64_t leafCount){
+    auto kernel = [grid_s,grid_d] __device__ (const uint64_t n) {
+        auto *leaf_d = grid_d->tree().getFirstNode<0>() + (n >> 9);// this only works if grid->isSequential<0>() == true
+        auto *leaf_s = grid_s->tree().getFirstNode<0>() + (n >> 9);// this only works if grid->isSequential<0>() == true
+        
+        const int i = n & 511;
+              
+        auto coord = leaf_d->offsetToGlobalCoord(i);
+
+        nanovdb::CurvatureStencil<nanovdb::FloatGrid> stencilNano(*grid_s);
+        stencilNano.moveTo(coord);
+        float old_n = leaf_s->getValue(coord);
+        float laplacian = stencilNano.laplacian();
+        //printf("%f\n",laplacian);
+        float factorEndothelial = laplacian * 0.0003 ;
+
+        leaf_d->setValueOnly(coord,old_n-factorEndothelial * time_factor);
+    };
+    thrust::counting_iterator<uint64_t, thrust::device_system_tag> iter(0);
+    thrust::for_each(iter, iter + 512*leafCount, kernel);
+}
 void factorTAF(nanovdb::FloatGrid * grid_s,nanovdb::FloatGrid * grid_d,nanovdb::FloatGrid* gridTAF,nanovdb::Vec3fGrid* gradientTAF,uint64_t leafCount){
     auto kernel = [grid_s,grid_d,gridTAF,gradientTAF] __device__ (const uint64_t n) {
         auto *leaf_d = grid_d->tree().getFirstNode<0>() + (n >> 9);// this only works if grid->isSequential<0>() == true
@@ -573,7 +594,7 @@ void factorTAF(nanovdb::FloatGrid * grid_s,nanovdb::FloatGrid * grid_d,nanovdb::
         }
         float factorTAF = gradientTAF[0][0] + gradientTAF[1][1] + gradientTAF[2][2];
 
-        float new_n = current_n - factorTAF;
+        float new_n = current_n - factorTAF * time_factor;
         leaf_d->setValueOnly(coord,new_n);
         
 
@@ -595,7 +616,7 @@ void factorFibronectin(nanovdb::FloatGrid * grid_s,nanovdb::FloatGrid * grid_d,n
         auto gradientFibronectin = stencilFibronectin.gradient();
         float factorFibronectin = gradientFibronectin[0][0] + gradientFibronectin[1][1] + gradientFibronectin[2][2];
         factorFibronectin = factorFibronectin * 0.28;
-        leaf_d->setValueOnly(coord,current_n-factorFibronectin);
+        leaf_d->setValueOnly(coord,current_n-factorFibronectin*time_factor);
 
     };
     thrust::counting_iterator<uint64_t, thrust::device_system_tag> iter(0);

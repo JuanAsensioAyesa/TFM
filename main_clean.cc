@@ -103,8 +103,8 @@ int main(int argc ,char * argv[]){
     std::map<std::string,nanovdb::FloatGrid*> nanoFloatMap1;
     std::map<std::string,nanovdb::FloatGrid*> nanoFloatMap2;
     std::map<std::string,nanovdb::Vec3fGrid*> nanoVecMap;
-    std::vector<std::string> floatNames = {"Endothelial","TAF","Fibronectin","MDE","TAFEndothelial","Bplus","BMinus","TummorCells","Oxygen",
-    "Pressure","PressureLaplacian","DeadCells","TipEndothelial","EndothelialDiscrete"};
+    std::vector<std::string> floatNames = {"Endothelial","TAF","Fibronectin","MDE","TAFEndothelial","Bplus","Bminus","TummorCells","Oxygen",
+    "Pressure","Diffusion","DeadCells","TipEndothelial","EndothelialDiscrete"};
     std::vector<std::string> endothelialGrids = {"Endothelial","TAF","Fibronectin","MDE","TAFEndothelial","TipEndothelial"};
     std::vector<std::string> tummorGrids = {"Bplus","BMinus","TummorCells","Oxygen","Pressure","PressureLaplacian","DeadCells"};
     std::vector<std::string> vecNames  = {"vecGrid"};
@@ -122,6 +122,7 @@ int main(int argc ,char * argv[]){
         gridsVec[name] = new Grid<Vec3,nanovdb::Vec3f,Vec3Open,Vec3Open::Ptr,Vec3Nano>(size_lado,profundidad_total,ini,false);
     }
     initializeAll<Grid<>,float>(gridsFloat,0.0);
+    fillRandomAll<Grid<>>(gridsFloat);
     fillRandomAll<Grid<Vec3,nanovdb::Vec3f,Vec3Open,Vec3Open::Ptr,Vec3Nano>>(gridsVec);
     uploadAll<Grid<>>(gridsFloat,floatNames);
     uploadAll<Grid<Vec3,nanovdb::Vec3f,Vec3Open,Vec3Open::Ptr,Vec3Nano>>(gridsVec,vecNames);
@@ -145,18 +146,27 @@ int main(int argc ,char * argv[]){
             gridFloatRead = &nanoFloatMap2;
             gridFloatWrite = &nanoFloatMap1;
         }
-        laplacian(gridFloatRead->at("MDE"),gridFloatRead->at("MDE"),nodeCount);
         equationMDE(gridFloatRead->at("EndothelialDiscrete"),gridFloatRead->at("MDE"),gridFloatWrite->at("MDE"),nodeCount);
-        equationFibronectin(gridFloatRead->at("EndothelialDiscrete"),gridFloatRead->at("Fibronectin"),gridFloatRead->at("MDA"),gridFloatWrite->at("Fibronectin"),nodeCount);
+        equationFibronectin(gridFloatRead->at("EndothelialDiscrete"),gridFloatRead->at("Fibronectin"),gridFloatRead->at("MDE"),gridFloatWrite->at("Fibronectin"),nodeCount);
         equationTAF(gridFloatRead->at("EndothelialDiscrete"),gridFloatRead->at("TAF"),gridFloatWrite->at("TAF"),nodeCount);
         product(gridFloatRead->at("TAF"),gridFloatRead->at("Endothelial"),gridFloatRead->at("TAFEndothelial"),nodeCount);
-        generateGradientFibronectin(gridFloatRead->at("Fibronectin"),gridFloatRead->at("EndothelialDiscrete"),nanoVecMap.at("vecGrid"),nodeCount);
+        
+        factorEndothelial(gridFloatRead->at("Endothelial"),gridFloatWrite->at("Endothelial"),nodeCount);
         generateGradientTAF(gridFloatRead->at("TAF"),gridFloatRead->at("TAFEndothelial"),nanoVecMap.at("vecGrid"),nodeCount);
-        equationEndothelial(gridFloatRead->at("EndothelialDiscrete"),gridFloatWrite->at("EndothelialDiscrete"),gridFloatRead->at("TAF"),gridFloatRead->at("Fibronectin"),nanoVecMap.at("vecGrid"),nanoVecMap.at("vecGrid"),gridFloatRead->at("TipEndothelial"),nodeCount);
+        factorTAF(gridFloatRead->at("Endothelial"),gridFloatWrite->at("Endothelial"),gridFloatRead->at("TAF"),nanoVecMap.at("vecGrid"),nodeCount);
+        generateGradientFibronectin(gridFloatRead->at("Fibronectin"),gridFloatRead->at("EndothelialDiscrete"),nanoVecMap.at("vecGrid"),nodeCount);
+        factorFibronectin(gridFloatRead->at("Endothelial"),gridFloatWrite->at("Endothelial"),gridFloatRead->at("Fibronectin"),nanoVecMap.at("vecGrid"),nodeCount);
         
+        equationBplusSimple(gridFloatRead->at("TummorCells"),gridFloatRead->at("Bplus"),gridFloatRead->at("Oxygen"),nodeCount);
+        equationBminusSimple(gridFloatRead->at("TummorCells"),gridFloatRead->at("Bminus"),gridFloatRead->at("Oxygen"),nodeCount);
+        equationPressure(gridFloatRead->at("TummorCells"),gridFloatRead->at("Pressure"),nodeCount);
+        equationFluxSimple(gridFloatRead->at("Pressure"),gridFloatRead->at("TummorCells"),nanoVecMap.at("vecGrid"),nodeCount);
+        equationTumorSimple(nanoVecMap.at("vecGrid"),gridFloatRead->at("Bplus"),gridFloatRead->at("Bminus"),gridFloatRead->at("TummorCells"),gridFloatWrite->at("TummorCells"),nodeCount);
+        for(int j = 0 ;j<1;j++){
+            average(gridFloatWrite->at("TummorCells"),gridFloatRead->at("Bplus"),nodeCount);
+            copy(gridFloatRead->at("Bplus"),gridFloatWrite->at("TummorCells"),nodeCount);
+        }
         
-        int dummy;
-        //std::cin>>dummy;
         
         
     }
