@@ -134,6 +134,17 @@ int main(int argc ,char * argv[]){
     std::map<std::string,nanovdb::FloatGrid*>* gridFloatWrite;
     gridsFloat["EndothelialDiscrete"]->upload();//Este siempre tendrá que estar en GPU
     uint64_t nodeCount = gridsFloat["EndothelialDiscrete"]->getPtrNano1(typePointer::CPU)->tree().nodeCount(0);
+    
+    using u32    = uint_least32_t; 
+    using engine = std::mt19937;
+    std::random_device os_seed;
+    u32 seed = os_seed();
+
+    engine generator( seed );
+    std::uniform_int_distribution< u32 > distribute( 1, nodeCount);
+    
+    openvdb::v9_0::FloatTree::Ptr newTree;
+
     for(int i = 0 ;i<n_veces;i++){
         std::cout<<i<<std::endl;
         
@@ -156,7 +167,9 @@ int main(int argc ,char * argv[]){
         factorTAF(gridFloatRead->at("Endothelial"),gridFloatWrite->at("Endothelial"),gridFloatRead->at("TAF"),nanoVecMap.at("vecGrid"),nodeCount);
         generateGradientFibronectin(gridFloatRead->at("Fibronectin"),gridFloatRead->at("EndothelialDiscrete"),nanoVecMap.at("vecGrid"),nodeCount);
         factorFibronectin(gridFloatRead->at("Endothelial"),gridFloatWrite->at("Endothelial"),gridFloatRead->at("Fibronectin"),nanoVecMap.at("vecGrid"),nodeCount);
-        
+        equationEndothelialDiscrete(gridFloatRead->at("EndothelialDiscrete"),gridFloatWrite->at("EndothelialDiscrete"),gridFloatRead->at("Endothelial"),gridFloatWrite->at("Endothelial"),gridFloatRead->at("TAF"),gridFloatRead->at("TipEndothelial"),gridFloatWrite->at("TipEndothelial"),seed,nodeCount);
+        branching(gridFloatWrite->at("TipEndothelial"),gridFloatRead->at("TAF"),seed,nodeCount);
+
         equationBplusSimple(gridFloatRead->at("TummorCells"),gridFloatRead->at("Bplus"),gridFloatRead->at("Oxygen"),nodeCount);
         equationBminusSimple(gridFloatRead->at("TummorCells"),gridFloatRead->at("Bminus"),gridFloatRead->at("Oxygen"),nodeCount);
         equationPressure(gridFloatRead->at("TummorCells"),gridFloatRead->at("Pressure"),nodeCount);
