@@ -88,6 +88,78 @@ void getAllNanoAccessor(std::map<std::string,gridClass*>& map,std::map<std::stri
         }
     }
 }
+float computeMin(nanovdb::FloatGrid * grid){
+    float min = 100000.0;
+    int size_lado = 250;
+    int profundidad_total = 150;
+    auto  accessor = grid->getAccessor();
+    nanovdb::Coord coord;
+    
+    for(int i  =0;i>-size_lado;i--){
+            for(int j = 0 ;j>-profundidad_total;j--){
+                for(int k = 0 ;k>-size_lado;k--){
+                    coord = openvdb::Coord(i,j,k);
+                    float aux = accessor.getValue(coord);
+                    if(aux < min){
+                        min = aux;
+                    }
+                }
+            }
+    }
+    return min;
+}
+float computeMax(nanovdb::FloatGrid * grid){
+    float max = -100000.0;
+    int size_lado = 250;
+    int profundidad_total = 150;
+    auto  accessor = grid->getAccessor();
+    nanovdb::Coord coord;
+    
+    for(int i  =0;i>-size_lado;i--){
+            for(int j = 0 ;j>-profundidad_total;j--){
+                for(int k = 0 ;k>-size_lado;k--){
+                    coord = openvdb::Coord(i,j,k);
+                    float aux = accessor.getValue(coord);
+                    if(aux > max){
+                        max = aux;
+                    }
+                }
+            }
+    }
+    return max;
+}
+float resolvePoisson(std::map<std::string,Grid<>*>& grids,int i,std::string gridName,std::string gridDestinyName, openvdb::v9_0::FloatTree::Ptr& newTree){
+
+    grids[gridName]->download();
+    grids[gridName]->copyNanoToOpen();
+    grids[gridDestinyName]->download();
+    float prevMax = computeMax(grids[gridName]->getPtrNano1(typePointer::CPU));
+    auto state = openvdb::math::pcg::terminationDefaults<float>();
+    if(i%2==0){
+        auto tree = grids[gridName]->getPtrOpen1()->tree();
+        newTree = openvdb::tools::poisson::solve<openvdb::v9_0::FloatTree>(tree,state);
+        grids[gridDestinyName]->getPtrOpen1()->setTree(newTree->copy());
+    }else{
+        auto tree = grids[gridName]->getPtrOpen1()->tree();
+        newTree = openvdb::tools::poisson::solve<openvdb::v9_0::FloatTree>(tree,state);
+        grids[gridDestinyName]->getPtrOpen2()->setTree(newTree->copy());
+    }
+    grids[gridName]->upload();
+    grids[gridDestinyName]->upload();
+
+    return prevMax;
+}
+void normalizePoisson(std::map<std::string,Grid<>*>& grids,std::string gridName,float prevMax,uint64_t nodeCount){
+
+    float max = computeMax(grids[gridName]->getPtrNano1(typePointer::CPU));
+    float min = computeMin(grids[gridName]->getPtrNano1(typePointer::CPU));
+    float addition = max-min;
+    float newMax = max + addition;
+
+    addMax(grids[gridName]->getPtrNano1(typePointer::DEVICE),addition,nodeCount);
+    normalize(grids[gridName]->getPtrNano1(typePointer::DEVICE),newMax,prevMax,nodeCount);
+}
+
 int main(int argc ,char * argv[]){
     using Vec3 = openvdb::Vec3s;
     using  Vec3Open = openvdb::Vec3SGrid ;
@@ -122,7 +194,6 @@ int main(int argc ,char * argv[]){
         gridsVec[name] = new Grid<Vec3,nanovdb::Vec3f,Vec3Open,Vec3Open::Ptr,Vec3Nano>(size_lado,profundidad_total,ini,false);
     }
     initializeAll<Grid<>,float>(gridsFloat,0.0);
-    fillRandomAll<Grid<>>(gridsFloat);
     fillRandomAll<Grid<Vec3,nanovdb::Vec3f,Vec3Open,Vec3Open::Ptr,Vec3Nano>>(gridsVec);
     uploadAll<Grid<>>(gridsFloat,floatNames);
     uploadAll<Grid<Vec3,nanovdb::Vec3f,Vec3Open,Vec3Open::Ptr,Vec3Nano>>(gridsVec,vecNames);
@@ -133,6 +204,7 @@ int main(int argc ,char * argv[]){
     std::map<std::string,nanovdb::FloatGrid*>* gridFloatRead;
     std::map<std::string,nanovdb::FloatGrid*>* gridFloatWrite;
     gridsFloat["EndothelialDiscrete"]->upload();//Este siempre tendrá que estar en GPU
+    
     uint64_t nodeCount = gridsFloat["EndothelialDiscrete"]->getPtrNano1(typePointer::CPU)->tree().nodeCount(0);
     
     using u32    = uint_least32_t; 
@@ -143,12 +215,23 @@ int main(int argc ,char * argv[]){
     engine generator( seed );
     std::uniform_int_distribution< u32 > distribute( 1, nodeCount);
     
-    openvdb::v9_0::FloatTree::Ptr newTree;
-
+    openvdb::v9_0::FloatTree::Ptr newTreeOxygen;
+    openvdb::v9_0::FloatTree::Ptr newTreeTAF;
+    generateEndothelial(gridsFloat["EndothelialDiscrete"]->getPtrNano1(typePointer::DEVICE),nodeCount,-39,-130,5);
+    generateEndothelial(gridsFloat["EndothelialDiscrete"]->getPtrNano2(typePointer::DEVICE),nodeCount,-39,-130,5);
+    bool condition;
+    float prevMax;
+    float prevMaxDiscrete;
+    float prevMaxTummor;
     for(int i = 0 ;i<n_veces;i++){
         std::cout<<i<<std::endl;
-        
-        
+        condition = i % 30 == 0;
+        if(condition){
+            prevMaxDiscrete = resolvePoisson(gridsFloat,i,"EndothelialDiscrete","Oxygen",newTreeOxygen);
+            prevMaxTummor = resolvePoisson(gridsFloat,i,"TummorCells","TAF",newTreeTAF);
+            getAllNanoAccessor<Grid<>,nanovdb::FloatGrid>(gridsFloat,nanoFloatMap1,typePointer::DEVICE,1);
+            getAllNanoAccessor<Grid<>,nanovdb::FloatGrid>(gridsFloat,nanoFloatMap2,typePointer::DEVICE,2);
+        }
         
         if(i%2 == 0 ){
             gridFloatRead = &nanoFloatMap1;
@@ -157,6 +240,13 @@ int main(int argc ,char * argv[]){
             gridFloatRead = &nanoFloatMap2;
             gridFloatWrite = &nanoFloatMap1;
         }
+
+        if(condition){
+            normalizePoisson(gridsFloat,"Oxygen",prevMaxDiscrete,nodeCount);
+            normalizePoisson(gridsFloat,"TAF",prevMaxTummor,nodeCount);
+
+        }
+
         equationMDE(gridFloatRead->at("EndothelialDiscrete"),gridFloatRead->at("MDE"),gridFloatWrite->at("MDE"),nodeCount);
         equationFibronectin(gridFloatRead->at("EndothelialDiscrete"),gridFloatRead->at("Fibronectin"),gridFloatRead->at("MDE"),gridFloatWrite->at("Fibronectin"),nodeCount);
         equationTAF(gridFloatRead->at("EndothelialDiscrete"),gridFloatRead->at("TAF"),gridFloatWrite->at("TAF"),nodeCount);
@@ -179,6 +269,8 @@ int main(int argc ,char * argv[]){
             average(gridFloatWrite->at("TummorCells"),gridFloatRead->at("Bplus"),nodeCount);
             copy(gridFloatRead->at("Bplus"),gridFloatWrite->at("TummorCells"),nodeCount);
         }
+
+
         
         
         
