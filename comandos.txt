@@ -1,2 +1,4 @@
 compilar,convertir y mover a texturas 
 make && ./bin/CONVERTER && ../convertvdb3 ../grids/albedoOxygen.vdb && mv ../grids/albedoOxygen.vol /home/juanasensio/Desktop/mitsuba2/escenas/material-testball/textures
+compilar, simular, convertir y mover a texturas
+make && ./bin/TFM_CLEAN 200  && ./bin/CONVERTER && ../convertvdb3 ../grids/albedoOxygen.vdb && mv ../grids/albedoOxygen.vol /home/juanasensio/Desktop/mitsuba2/escenas/material-testball/textures

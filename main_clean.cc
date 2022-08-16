@@ -208,7 +208,7 @@ int main(int argc ,char * argv[]){
     float prevMaxTummor;
     openvdb::Coord esquina_izquierda;
     esquina_izquierda[0] = 0 ;
-    esquina_izquierda[1] =0 ;
+    esquina_izquierda[1] =-23 ;
     esquina_izquierda[2] =0 ;
     int tamanio_tumor = 1;
     auto accessor_tummor_1 = gridsFloat["TummorCells"]->getAccessorOpen1();
