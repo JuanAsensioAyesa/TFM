@@ -31,7 +31,7 @@ void regenerateEndothelial(nanovdb::FloatGrid* gridEndothelialContinue,nanovdb::
 void equationBplusSimple(nanovdb::FloatGrid* gridTumor,nanovdb::FloatGrid* gridBplus,nanovdb::FloatGrid* gridOxygen,u_int64_t leafCount);
 void equationBminusSimple(nanovdb::FloatGrid* gridTumor,nanovdb::FloatGrid* gridBminus,nanovdb::FloatGrid* gridOxygen,u_int64_t leafCount);
 void equationPressure(nanovdb::FloatGrid* gridTumor,nanovdb::FloatGrid* gridPressure,u_int64_t leafCount);
-void equationFluxSimple(nanovdb::FloatGrid* gridPressure,nanovdb::FloatGrid* gridTumor,nanovdb::Vec3fGrid* gridFlux,u_int64_t leafCount);
+void equationFluxSimple(nanovdb::FloatGrid* gridPressure,nanovdb::FloatGrid* gridTumor,nanovdb::Vec3fGrid* gridFlux,nanovdb::FloatGrid* diffusionGrid,u_int64_t leafCount);
 void equationTumorSimple(nanovdb::Vec3fGrid* gridFlux,nanovdb::FloatGrid* gridBplus,nanovdb::FloatGrid* gridBminus,nanovdb::FloatGrid* gridTumorRead,nanovdb::FloatGrid* gridTumorWrite,u_int64_t leafCount);
 void discretize(nanovdb::FloatGrid* grid,u_int64_t leafCount);
 void average(nanovdb::FloatGrid* grid,nanovdb::FloatGrid* destiny,u_int64_t leafCount);

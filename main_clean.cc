@@ -194,6 +194,7 @@ int main(int argc ,char * argv[]){
         gridsVec[name] = new Grid<Vec3,nanovdb::Vec3f,Vec3Open,Vec3Open::Ptr,Vec3Nano>(size_lado,profundidad_total,ini,false);
     }
     initializeAll<Grid<>,float>(gridsFloat,0.0);
+    gridsFloat.at("Diffusion")->fillValue(0.001);
     fillRandomAll<Grid<Vec3,nanovdb::Vec3f,Vec3Open,Vec3Open::Ptr,Vec3Nano>>(gridsVec);
     std::map<std::string,nanovdb::FloatGrid*>* gridFloatRead;
     std::map<std::string,nanovdb::FloatGrid*>* gridFloatWrite;
@@ -208,7 +209,7 @@ int main(int argc ,char * argv[]){
     float prevMaxTummor;
     openvdb::Coord esquina_izquierda;
     esquina_izquierda[0] = 0 ;
-    esquina_izquierda[1] =-23 ;
+    esquina_izquierda[1] =-38 ;
     esquina_izquierda[2] =0 ;
     int tamanio_tumor = 1;
     auto accessor_tummor_1 = gridsFloat["TummorCells"]->getAccessorOpen1();
@@ -238,12 +239,15 @@ int main(int argc ,char * argv[]){
 
     for(int i = 0 ;i<n_veces;i++){
         std::cout<<i<<std::endl;
-        condition = i % 30 == 0;
+        condition = i % 300 == 0;
+        condition = false;
         if(condition){
+            
             prevMaxDiscrete = resolvePoisson(gridsFloat,i,"EndothelialDiscrete","Oxygen",newTreeOxygen);
             prevMaxTummor = resolvePoisson(gridsFloat,i,"TummorCells","TAF",newTreeTAF);
             getAllNanoAccessor<Grid<>,nanovdb::FloatGrid>(gridsFloat,nanoFloatMap1,typePointer::DEVICE,1);
             getAllNanoAccessor<Grid<>,nanovdb::FloatGrid>(gridsFloat,nanoFloatMap2,typePointer::DEVICE,2);
+            //Hacer aqui bien de laplacianos
         }
         
         if(i%2 == 0 ){
@@ -276,13 +280,14 @@ int main(int argc ,char * argv[]){
         equationBplusSimple(gridFloatRead->at("TummorCells"),gridFloatRead->at("Bplus"),gridFloatRead->at("Oxygen"),nodeCount);
         equationBminusSimple(gridFloatRead->at("TummorCells"),gridFloatRead->at("Bminus"),gridFloatRead->at("Oxygen"),nodeCount);
         equationPressure(gridFloatRead->at("TummorCells"),gridFloatRead->at("Pressure"),nodeCount);
-        equationFluxSimple(gridFloatRead->at("Pressure"),gridFloatRead->at("TummorCells"),nanoVecMap.at("vecGrid"),nodeCount);
+        equationFluxSimple(gridFloatRead->at("Pressure"),gridFloatRead->at("TummorCells"),nanoVecMap.at("vecGrid"),gridFloatRead->at("Diffusion"),nodeCount);
         equationTumorSimple(nanoVecMap.at("vecGrid"),gridFloatRead->at("Bplus"),gridFloatRead->at("Bminus"),gridFloatRead->at("TummorCells"),gridFloatWrite->at("TummorCells"),nodeCount);
         for(int j = 0 ;j<1;j++){
             average(gridFloatWrite->at("TummorCells"),gridFloatRead->at("Bplus"),nodeCount);
             copy(gridFloatRead->at("Bplus"),gridFloatWrite->at("TummorCells"),nodeCount);
         }
 
+        
 
         
         

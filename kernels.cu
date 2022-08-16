@@ -1090,7 +1090,7 @@ void laplacian(nanovdb::FloatGrid * grid_s,nanovdb::FloatGrid * grid_d, uint64_t
         // if(laplacian!= 0){
         //     //printf("%f\n",laplacian);
         // }
-        auto new_value = old_value + laplacian*0.2;
+        auto new_value = old_value + laplacian*0.1;
 
         // if(new_value < 0 ){
         //     new_value = 0;
@@ -1389,7 +1389,7 @@ void equationTumorSimple(nanovdb::Vec3fGrid* gridFlux,nanovdb::FloatGrid* gridBp
         // if(factor_divergence!=0){
         //     //printf("%f %f\n",factor_divergence,b_plus);
         // }
-        float derivative = factor_divergence + b_plus ;//+ b_minus;
+        float derivative = factor_divergence + b_plus + b_minus;
         // if(derivative < 0 ) {
         //     derivative  = 0 ;
         // }
@@ -1413,11 +1413,12 @@ void equationTumorSimple(nanovdb::Vec3fGrid* gridFlux,nanovdb::FloatGrid* gridBp
     thrust::for_each(iter, iter + 512*leafCount, kernel);
 }
 
-void equationFluxSimple(nanovdb::FloatGrid* gridPressure,nanovdb::FloatGrid* gridTumor,nanovdb::Vec3fGrid* gridFlux,u_int64_t leafCount){
-    auto kernel = [gridPressure,gridTumor,gridFlux] __device__ (const uint64_t n) {
+void equationFluxSimple(nanovdb::FloatGrid* gridPressure,nanovdb::FloatGrid* gridTumor,nanovdb::Vec3fGrid* gridFlux,nanovdb::FloatGrid* diffusionGrid,u_int64_t leafCount){
+    auto kernel = [gridPressure,gridTumor,gridFlux,diffusionGrid] __device__ (const uint64_t n) {
         auto *leaf_Pressure = gridPressure->tree().getFirstNode<0>() + (n >> 9);
         auto *leaf_Tumor = gridTumor->tree().getFirstNode<0>() + (n>>9);
         auto *leaf_Flux = gridFlux->tree().getFirstNode<0>() + (n>>9);
+        auto *leaf_diffusion= diffusionGrid->tree().getFirstNode<0>() + (n>>9);
         const int i = n & 511;
         
         auto coord = leaf_Tumor->offsetToGlobalCoord(i);
@@ -1425,18 +1426,18 @@ void equationFluxSimple(nanovdb::FloatGrid* gridPressure,nanovdb::FloatGrid* gri
         nanovdb::CurvatureStencil<nanovdb::FloatGrid> stencilNano(*gridPressure);
         stencilNano.moveTo(coord);
         auto gradiente = stencilNano.gradient();
-        float diffussion_coefficient =.1;//Esto dependera de cada capa de la piel
+        
         // if(leaf_Pressure->getValue(coord)>0.0){
         //     //printf("%f %f %f\n",gradiente[0],gradiente[1],gradiente[2]);
         // }
-
+        float diffussion_coefficient = leaf_diffusion->getValue(i);
         float tumor_cells = leaf_Tumor->getValue(i);
-        // for(int i = 0;i<3;i++){
-        //     gradiente[i] *= -diffussion_coefficient* tumor_cells;
-        // }
-        // if(gradiente[0]!=0 || gradiente[1] != 0 || gradiente[2]!=0){
-        //     //printf("%f %f %f \n",gradiente[0],gradiente[1],gradiente[2]);
-        // }
+        for(int i = 0;i<3;i++){
+            gradiente[i] *= -diffussion_coefficient;//* tumor_cells;
+        }
+        if(gradiente[0]!=0 || gradiente[1] != 0 || gradiente[2]!=0){
+            //printf("%f %f %f \n",gradiente[0],gradiente[1],gradiente[2]);
+        }
         leaf_Flux->setValue(coord,gradiente);
 
     };
