@@ -1183,6 +1183,17 @@ void normalize(nanovdb::FloatGrid * gridTAF,float maxValue,float prevMax, uint64
     thrust::counting_iterator<uint64_t, thrust::device_system_tag> iter(0);
     thrust::for_each(iter, iter + 512*leafCount, kernel);
 }
+void normalize(nanovdb::FloatGrid * grid,float maxValue, uint64_t leafCount){
+    auto kernel = [grid,maxValue] __device__ (const uint64_t n) {
+        auto* leaf = grid->tree().getFirstNode<0>() + (n >> 9);// this only works if grid->isSequential<0>() == true
+        const int i = n & 511;
+        float new_value = leaf->getValue(i);
+        new_value = new_value / maxValue;
+        leaf->setValueOnly(i,new_value);
+    };
+    thrust::counting_iterator<uint64_t, thrust::device_system_tag> iter(0);
+    thrust::for_each(iter, iter + 512*leafCount, kernel);
+}
 void addMax(nanovdb::FloatGrid * gridTAF, float maxValue,uint64_t leafCount){
     auto kernel = [gridTAF,maxValue] __device__ (const uint64_t n) {
        // auto *leaf_d = grid_d->tree().getFirstNode<0>() + (n >> 9);// this only works if grid->isSequential<0>() == true

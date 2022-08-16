@@ -185,7 +185,7 @@ int main(int argc ,char * argv[]){
     for(auto it = floatNames.begin();it!=floatNames.end();it++){
         std::string name = *it;
         createBoth = name == "Endothelial" || name == "TAF" || name == "Fibronectin" || name == "MDE" || name == "TAFEndothelial"
-        ||name == "TipEndothelial" || name == "EndothelialDiscrete";
+        ||name == "TipEndothelial" || name == "EndothelialDiscrete" || name == "TummorCells";
         gridsFloat[name] = new Grid<>(size_lado,profundidad_total,0.0,createBoth);
     }
     for(auto it = vecNames.begin();it != vecNames.end();it++){
@@ -195,18 +195,38 @@ int main(int argc ,char * argv[]){
     }
     initializeAll<Grid<>,float>(gridsFloat,0.0);
     fillRandomAll<Grid<Vec3,nanovdb::Vec3f,Vec3Open,Vec3Open::Ptr,Vec3Nano>>(gridsVec);
+    std::map<std::string,nanovdb::FloatGrid*>* gridFloatRead;
+    std::map<std::string,nanovdb::FloatGrid*>* gridFloatWrite;
+    gridsFloat["EndothelialDiscrete"]->upload();//Este siempre tendrá que estar en GPU
+    
+
+    openvdb::v9_0::FloatTree::Ptr newTreeOxygen;
+    openvdb::v9_0::FloatTree::Ptr newTreeTAF;
+    bool condition;
+    float prevMax;
+    float prevMaxDiscrete;
+    float prevMaxTummor;
+    openvdb::Coord esquina_izquierda;
+    esquina_izquierda[0] = 0 ;
+    esquina_izquierda[1] =0 ;
+    esquina_izquierda[2] =0 ;
+    int tamanio_tumor = 1;
+    auto accessor_tummor_1 = gridsFloat["TummorCells"]->getAccessorOpen1();
+    auto accessor_tummor_2 = gridsFloat["TummorCells"]->getAccessorOpen2();
+
+    createRectangle(accessor_tummor_1,esquina_izquierda,tamanio_tumor,1.0);
+    createRectangle(accessor_tummor_2,esquina_izquierda,tamanio_tumor,1.0);
+    
+    
     uploadAll<Grid<>>(gridsFloat,floatNames);
     uploadAll<Grid<Vec3,nanovdb::Vec3f,Vec3Open,Vec3Open::Ptr,Vec3Nano>>(gridsVec,vecNames);
 
     getAllNanoAccessor<Grid<Vec3,nanovdb::Vec3f,Vec3Open,Vec3Open::Ptr,Vec3Nano>,nanovdb::Vec3fGrid>(gridsVec,nanoVecMap,typePointer::DEVICE,1);
     getAllNanoAccessor<Grid<>,nanovdb::FloatGrid>(gridsFloat,nanoFloatMap1,typePointer::DEVICE,1);
     getAllNanoAccessor<Grid<>,nanovdb::FloatGrid>(gridsFloat,nanoFloatMap2,typePointer::DEVICE,2);
-    std::map<std::string,nanovdb::FloatGrid*>* gridFloatRead;
-    std::map<std::string,nanovdb::FloatGrid*>* gridFloatWrite;
-    gridsFloat["EndothelialDiscrete"]->upload();//Este siempre tendrá que estar en GPU
-    
     uint64_t nodeCount = gridsFloat["EndothelialDiscrete"]->getPtrNano1(typePointer::CPU)->tree().nodeCount(0);
-    
+    generateEndothelial(gridsFloat["EndothelialDiscrete"]->getPtrNano1(typePointer::DEVICE),nodeCount,-39,-130,5);
+    generateEndothelial(gridsFloat["EndothelialDiscrete"]->getPtrNano2(typePointer::DEVICE),nodeCount,-39,-130,5);
     using u32    = uint_least32_t; 
     using engine = std::mt19937;
     std::random_device os_seed;
@@ -215,14 +235,7 @@ int main(int argc ,char * argv[]){
     engine generator( seed );
     std::uniform_int_distribution< u32 > distribute( 1, nodeCount);
     
-    openvdb::v9_0::FloatTree::Ptr newTreeOxygen;
-    openvdb::v9_0::FloatTree::Ptr newTreeTAF;
-    generateEndothelial(gridsFloat["EndothelialDiscrete"]->getPtrNano1(typePointer::DEVICE),nodeCount,-39,-130,5);
-    generateEndothelial(gridsFloat["EndothelialDiscrete"]->getPtrNano2(typePointer::DEVICE),nodeCount,-39,-130,5);
-    bool condition;
-    float prevMax;
-    float prevMaxDiscrete;
-    float prevMaxTummor;
+
     for(int i = 0 ;i<n_veces;i++){
         std::cout<<i<<std::endl;
         condition = i % 30 == 0;
@@ -275,7 +288,8 @@ int main(int argc ,char * argv[]){
         
         
     }
-
+    float maxTummor = computeMax(gridsFloat.at("TummorCells")->getPtrNano1(typePointer::CPU));
+    normalize(nanoFloatMap1.at("TummorCells"),maxTummor,nodeCount);
 
     downloadAll<Grid<>>(gridsFloat,floatNames);
     downloadAll<Grid<Vec3,nanovdb::Vec3f,Vec3Open,Vec3Open::Ptr,Vec3Nano>>(gridsVec,vecNames);
