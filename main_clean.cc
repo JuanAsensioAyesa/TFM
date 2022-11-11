@@ -194,12 +194,26 @@ int main(int argc ,char * argv[]){
         gridsVec[name] = new Grid<Vec3,nanovdb::Vec3f,Vec3Open,Vec3Open::Ptr,Vec3Nano>(size_lado,profundidad_total,ini,false);
     }
     initializeAll<Grid<>,float>(gridsFloat,0.0);
-    gridsFloat.at("Diffusion")->fillValue(0.001);
+    float max_diffussion = 0.1;
+    float max_paper = 83.0;
+    dataSkin diffussionCoef;
+    diffussionCoef.valueCorneum = 83.0 / max_paper * max_diffussion;
+    diffussionCoef.valueSpinosum = 8.3 / max_paper * max_diffussion;
+    diffussionCoef.valueBasale = 41.5 / max_paper * max_diffussion;
+    diffussionCoef.valueDermis = 30 / max_paper * max_diffussion;
+    diffussionCoef.valueHipoDermis = 0.01666 / max_paper * max_diffussion;
+    auto accessorDif = gridsFloat.at("Diffusion")->getAccessorOpen1();
+    openvdb::Coord coord_dif;
+    createSkin(accessorDif,size_lado,profundidad_total,coord_dif,diffussionCoef);
+    std::cout<<"Ey"<<std::endl;
+
     fillRandomAll<Grid<Vec3,nanovdb::Vec3f,Vec3Open,Vec3Open::Ptr,Vec3Nano>>(gridsVec);
+    std::cout<<"Ey"<<std::endl;
     std::map<std::string,nanovdb::FloatGrid*>* gridFloatRead;
     std::map<std::string,nanovdb::FloatGrid*>* gridFloatWrite;
-    gridsFloat["EndothelialDiscrete"]->upload();//Este siempre tendrá que estar en GPU
     
+    gridsFloat["EndothelialDiscrete"]->upload();//Este siempre tendrá que estar en GPU
+    std::cout<<"Ey"<<std::endl;
 
     openvdb::v9_0::FloatTree::Ptr newTreeOxygen;
     openvdb::v9_0::FloatTree::Ptr newTreeTAF;
@@ -214,10 +228,10 @@ int main(int argc ,char * argv[]){
     int tamanio_tumor = 1;
     auto accessor_tummor_1 = gridsFloat["TummorCells"]->getAccessorOpen1();
     auto accessor_tummor_2 = gridsFloat["TummorCells"]->getAccessorOpen2();
-
+    std::cout<<"Ey"<<std::endl;
     createRectangle(accessor_tummor_1,esquina_izquierda,tamanio_tumor,1.0);
     createRectangle(accessor_tummor_2,esquina_izquierda,tamanio_tumor,1.0);
-    
+
     
     uploadAll<Grid<>>(gridsFloat,floatNames);
     uploadAll<Grid<Vec3,nanovdb::Vec3f,Vec3Open,Vec3Open::Ptr,Vec3Nano>>(gridsVec,vecNames);
@@ -235,19 +249,20 @@ int main(int argc ,char * argv[]){
 
     engine generator( seed );
     std::uniform_int_distribution< u32 > distribute( 1, nodeCount);
-    
 
     for(int i = 0 ;i<n_veces;i++){
         std::cout<<i<<std::endl;
-        condition = i % 300 == 0;
-        condition = false;
-        if(condition){
+        condition = i % 300 == 0 || i == n_veces - 2;
+        
+        if(condition  ){
             
             prevMaxDiscrete = resolvePoisson(gridsFloat,i,"EndothelialDiscrete","Oxygen",newTreeOxygen);
             prevMaxTummor = resolvePoisson(gridsFloat,i,"TummorCells","TAF",newTreeTAF);
             getAllNanoAccessor<Grid<>,nanovdb::FloatGrid>(gridsFloat,nanoFloatMap1,typePointer::DEVICE,1);
             getAllNanoAccessor<Grid<>,nanovdb::FloatGrid>(gridsFloat,nanoFloatMap2,typePointer::DEVICE,2);
             //Hacer aqui bien de laplacianos
+            //average(nanoFloatMap1.at("EndothelialDiscrete"),nanoFloatMap1.at("Oxygen"),nodeCount);
+            
         }
         
         if(i%2 == 0 ){
@@ -261,6 +276,11 @@ int main(int argc ,char * argv[]){
         if(condition){
             normalizePoisson(gridsFloat,"Oxygen",prevMaxDiscrete,nodeCount);
             normalizePoisson(gridsFloat,"TAF",prevMaxTummor,nodeCount);
+            for(int j = 0 ;j < 5 ;j++){
+                average(nanoFloatMap1.at("Oxygen"),nanoFloatMap1.at("Bplus"),nodeCount);
+                copy(nanoFloatMap1.at("Bplus"),nanoFloatMap1.at("Oxygen"),nodeCount);
+                //generateEndothelial(nanoFloatMap1.at("Oxygen"),nodeCount,-39,-130,5);
+            }
 
         }
 
@@ -293,8 +313,7 @@ int main(int argc ,char * argv[]){
         
         
     }
-    float maxTummor = computeMax(gridsFloat.at("TummorCells")->getPtrNano1(typePointer::CPU));
-    normalize(nanoFloatMap1.at("TummorCells"),maxTummor,nodeCount);
+    
 
     downloadAll<Grid<>>(gridsFloat,floatNames);
     downloadAll<Grid<Vec3,nanovdb::Vec3f,Vec3Open,Vec3Open::Ptr,Vec3Nano>>(gridsVec,vecNames);

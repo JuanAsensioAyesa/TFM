@@ -1260,7 +1260,7 @@ void equationBplusSimple(nanovdb::FloatGrid* gridTumor,nanovdb::FloatGrid* gridB
         
         auto coord = leaf_Tumor->offsetToGlobalCoord(i);
         float oxygen = leaf_Oxygen->getValue(i);
-        float oxygenThreshold = 0.1;
+        float oxygenThreshold = 0.3;
         
         
         if(oxygen>oxygenThreshold){
@@ -1489,7 +1489,7 @@ void copy(nanovdb::FloatGrid* source ,nanovdb::FloatGrid* destiny,u_int64_t leaf
 
 void albedoHemogoblin(nanovdb::FloatGrid* oxygen,nanovdb::Vec3fGrid* albedo,u_int64_t leafCount){
     auto kernel = [oxygen,albedo] __device__ (const uint64_t n) {
-        nanovdb::Vec3f base_color = {1.0,203.0/256.0,190.0/256.0};
+        nanovdb::Vec3f base_color = {1,203.0/256.0,190.0/256.0};
         nanovdb::Vec3f hemoglobin_color = {230.0/256.0,191.0/256.0,170.0/256.0};
         auto* leaf_Oxygen = oxygen->tree().getFirstNode<0>() + (n >> 9);
         auto* leaf_Albedo = albedo->tree().getFirstNode<0>() + (n >> 9);
@@ -1518,6 +1518,7 @@ void albedoHemogoblin(nanovdb::FloatGrid* oxygen,nanovdb::Vec3fGrid* albedo,u_in
     thrust::counting_iterator<uint64_t, thrust::device_system_tag> iter(0);
     thrust::for_each(iter, iter + 512*leafCount, kernel);
 }
+
 
 // void baseSkinColor(nanovdb::FloatGrid* melaninConcentration,nanovdb::Vec3fGrid* skinColor,u_int64_t leafCount){
 //     auto kernel = [melaninConcentration,skinColor] __device__ (const uint64_t n) {

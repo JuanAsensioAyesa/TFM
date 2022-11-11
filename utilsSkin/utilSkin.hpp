@@ -72,8 +72,8 @@ void createSkin(openvdb::FloatGrid::Accessor& accessor,int size_lado,int profund
     profundidad_total = profundidad_total - profundidadHipoDermis;
     float epidermis =0.3; //Proporcion de Epidermis
     int profundidadEpidermis = profundidad_total * epidermis;
-    int profundidadBasale = profundidadEpidermis * 0.1;
-    int profundidadSpinosum = profundidadEpidermis * 0.15;
+    int profundidadBasale = profundidadEpidermis * 0.2;
+    int profundidadSpinosum = profundidadEpidermis * 0.5;
     int profundidadCorneum = profundidadEpidermis - profundidadBasale - profundidadSpinosum;
 
     int profundidadDermis = profundidad_total - profundidadEpidermis;
