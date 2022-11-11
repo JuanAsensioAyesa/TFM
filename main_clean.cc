@@ -223,7 +223,7 @@ int main(int argc ,char * argv[]){
     float prevMaxTummor;
     openvdb::Coord esquina_izquierda;
     esquina_izquierda[0] = 0 ;
-    esquina_izquierda[1] =-38 ;
+    esquina_izquierda[1] =-34+5 ;
     esquina_izquierda[2] =0 ;
     int tamanio_tumor = 1;
     auto accessor_tummor_1 = gridsFloat["TummorCells"]->getAccessorOpen1();
@@ -306,7 +306,7 @@ int main(int argc ,char * argv[]){
             average(gridFloatWrite->at("TummorCells"),gridFloatRead->at("Bplus"),nodeCount);
             copy(gridFloatRead->at("Bplus"),gridFloatWrite->at("TummorCells"),nodeCount);
         }
-
+        degradeOxygen(gridFloatRead->at("Oxygen"),gridFloatWrite->at("TummorCells"),nodeCount);
         
 
         

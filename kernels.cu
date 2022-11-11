@@ -408,7 +408,7 @@ __device__ float average(nanovdb::Coord coord,nanovdb::FloatGrid * input_grid,ui
     auto* leaf = input_grid->tree().getFirstNode<0>() + (n >> 9);
     //int desplazamientos[] = {-4,-3,-2,-1,0,1,2,3,4};
     int desplazamientos[] = {-1,0,1};
-    int len_desp = 3;
+    int len_desp = 9;
     float n_i = 0;
     bool esVecino = false;
     float total = 0.0;
@@ -1213,7 +1213,28 @@ void addMax(nanovdb::FloatGrid * gridTAF, float maxValue,uint64_t leafCount){
     thrust::counting_iterator<uint64_t, thrust::device_system_tag> iter(0);
     thrust::for_each(iter, iter + 512*leafCount, kernel);
 }
+void degradeOxygen(nanovdb::FloatGrid * gridOxygen, nanovdb::FloatGrid * gridTummor,uint64_t leafCount){
+    auto kernel = [gridOxygen,gridTummor] __device__ (const uint64_t n) {
+       // auto *leaf_d = grid_d->tree().getFirstNode<0>() + (n >> 9);// this only works if grid->isSequential<0>() == true
+        auto *leaf_Oxygen = gridOxygen->tree().getFirstNode<0>() + (n >> 9);// this only works if grid->isSequential<0>() == true
+        auto *leaf_Tummor = gridTummor->tree().getFirstNode<0>() + (n >> 9);// this only works if grid->isSequential<0>() == true
+        //auto *leaf_Endothelial = gridEndothelial->tree().getFirstNode<0>() + (n >> 9);// this only works if grid->isSequential<0>() == true
 
+        const int i = n & 511;
+        
+        //auto coord = leaf_d->offsetToGlobalCoord(i);
+
+        
+        float new_value = leaf_Oxygen->getValue(i) - leaf_Tummor->getValue(i) * 0.1;
+        if(new_value < 0 ){
+            new_value = 0 ;
+        }
+        leaf_Oxygen->setValueOnly(i,new_value);
+
+    };
+    thrust::counting_iterator<uint64_t, thrust::device_system_tag> iter(0);
+    thrust::for_each(iter, iter + 512*leafCount, kernel);
+}
 void absolute(nanovdb::FloatGrid * gridTAF, uint64_t leafCount){
     auto kernel = [gridTAF] __device__ (const uint64_t n) {
        // auto *leaf_d = grid_d->tree().getFirstNode<0>() + (n >> 9);// this only works if grid->isSequential<0>() == true
@@ -1389,7 +1410,7 @@ void equationTumorSimple(nanovdb::Vec3fGrid* gridFlux,nanovdb::FloatGrid* gridBp
         // if(factor_divergence!=0){
         //     //printf("%f %f\n",factor_divergence,b_plus);
         // }
-        float derivative = factor_divergence + b_plus + b_minus;
+        float derivative = factor_divergence + b_plus ;//+ b_minus;
         // if(derivative < 0 ) {
         //     derivative  = 0 ;
         // }
