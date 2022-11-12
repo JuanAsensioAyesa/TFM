@@ -198,10 +198,16 @@ int main(int argc ,char * argv[]){
     float max_paper = 83.0;
     dataSkin diffussionCoef;
     diffussionCoef.valueCorneum = 83.0 / max_paper * max_diffussion;
-    diffussionCoef.valueSpinosum = 8.3 / max_paper * max_diffussion;
+    diffussionCoef.valueSpinosum = 8.3/ max_paper * max_diffussion;
     diffussionCoef.valueBasale = 41.5 / max_paper * max_diffussion;
     diffussionCoef.valueDermis = 30 / max_paper * max_diffussion;
     diffussionCoef.valueHipoDermis = 0.01666 / max_paper * max_diffussion;
+
+    diffussionCoef.valueCorneum = 30.0 / max_paper * max_diffussion;
+    diffussionCoef.valueSpinosum = 83./ max_paper * max_diffussion;
+    diffussionCoef.valueBasale = 8.3 / max_paper * max_diffussion;
+    diffussionCoef.valueDermis = 41.5 / max_paper * max_diffussion;
+    diffussionCoef.valueHipoDermis = 20. / max_paper * max_diffussion;
     auto accessorDif = gridsFloat.at("Diffusion")->getAccessorOpen1();
     openvdb::Coord coord_dif;
     createSkin(accessorDif,size_lado,profundidad_total,coord_dif,diffussionCoef);
@@ -262,7 +268,7 @@ int main(int argc ,char * argv[]){
 
             }
             prevMaxDiscrete = resolvePoisson(gridsFloat,i,"EndothelialDiscrete","Oxygen",newTreeOxygen);
-            prevMaxTummor = resolvePoisson(gridsFloat,i,"TummorCells","TAF",newTreeTAF);
+            prevMaxTummor = resolvePoisson(gridsFloat,i,"DeadCells","TAF",newTreeTAF);
             getAllNanoAccessor<Grid<>,nanovdb::FloatGrid>(gridsFloat,nanoFloatMap1,typePointer::DEVICE,1);
             getAllNanoAccessor<Grid<>,nanovdb::FloatGrid>(gridsFloat,nanoFloatMap2,typePointer::DEVICE,2);
             //Hacer aqui bien de laplacianos
@@ -287,8 +293,9 @@ int main(int argc ,char * argv[]){
                 copy(nanoFloatMap1.at("Bplus"),nanoFloatMap1.at("Oxygen"),nodeCount);
                 //generateEndothelial(nanoFloatMap1.at("Oxygen"),nodeCount,-39,-130,5);
             }
+            generateEndothelial(nanoFloatMap1.at("Oxygen"),nodeCount,-35,-130,5);
             degradeOxygen(gridFloatRead->at("Oxygen"),gridFloatWrite->at("TummorCells"),0.4,nodeCount);
-
+            newTips(gridFloatWrite->at("TipEndothelial"),gridFloatRead->at("TAF"),gridFloatRead->at("EndothelialDiscrete"),seed,nodeCount);
 
         }
 
@@ -315,8 +322,10 @@ int main(int argc ,char * argv[]){
             copy(gridFloatRead->at("Bplus"),gridFloatWrite->at("TummorCells"),nodeCount);
         }
         
+
         addDeadCells(gridFloatRead->at("Bminus"),gridFloatRead->at("DeadCells"),nodeCount);
-        
+        //degradeOxygen(gridFloatRead->at("Oxygen"),gridFloatWrite->at("TummorCells"),0.035,nodeCount);
+
         // for(int j = 0;j<5;j++){
         //     average(gridFloatWrite->at("Oxygen"),gridFloatRead->at("Bplus"),nodeCount);
         //     copy(gridFloatRead->at("Bplus"),gridFloatWrite->at("Oxygen"),nodeCount);
