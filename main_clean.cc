@@ -223,7 +223,7 @@ int main(int argc ,char * argv[]){
     float prevMaxTummor;
     openvdb::Coord esquina_izquierda;
     esquina_izquierda[0] = 0 ;
-    esquina_izquierda[1] =-34+5 ;
+    esquina_izquierda[1] =-34 ;
     esquina_izquierda[2] =0 ;
     int tamanio_tumor = 1;
     auto accessor_tummor_1 = gridsFloat["TummorCells"]->getAccessorOpen1();
@@ -240,8 +240,8 @@ int main(int argc ,char * argv[]){
     getAllNanoAccessor<Grid<>,nanovdb::FloatGrid>(gridsFloat,nanoFloatMap1,typePointer::DEVICE,1);
     getAllNanoAccessor<Grid<>,nanovdb::FloatGrid>(gridsFloat,nanoFloatMap2,typePointer::DEVICE,2);
     uint64_t nodeCount = gridsFloat["EndothelialDiscrete"]->getPtrNano1(typePointer::CPU)->tree().nodeCount(0);
-    generateEndothelial(gridsFloat["EndothelialDiscrete"]->getPtrNano1(typePointer::DEVICE),nodeCount,-39,-130,5);
-    generateEndothelial(gridsFloat["EndothelialDiscrete"]->getPtrNano2(typePointer::DEVICE),nodeCount,-39,-130,5);
+    generateEndothelial(gridsFloat["EndothelialDiscrete"]->getPtrNano1(typePointer::DEVICE),nodeCount,-35,-130,5);
+    generateEndothelial(gridsFloat["EndothelialDiscrete"]->getPtrNano2(typePointer::DEVICE),nodeCount,-35,-130,5);
     using u32    = uint_least32_t; 
     using engine = std::mt19937;
     std::random_device os_seed;
@@ -252,16 +252,22 @@ int main(int argc ,char * argv[]){
 
     for(int i = 0 ;i<n_veces;i++){
         std::cout<<i<<std::endl;
-        condition = i % 300 == 0 || i == n_veces - 2;
+        condition = i % 100 == 0 ;//|| i == n_veces - 2;
         
         if(condition  ){
-            
+            if(i > 0){
+                //std::cout<<"Jelous"<<std::endl;
+                degradeOxygen(gridFloatRead->at("EndothelialDiscrete"),gridFloatWrite->at("TummorCells"),1.0,nodeCount);
+                degradeOxygen(gridFloatWrite->at("EndothelialDiscrete"),gridFloatWrite->at("TummorCells"),1.0,nodeCount);
+
+            }
             prevMaxDiscrete = resolvePoisson(gridsFloat,i,"EndothelialDiscrete","Oxygen",newTreeOxygen);
             prevMaxTummor = resolvePoisson(gridsFloat,i,"TummorCells","TAF",newTreeTAF);
             getAllNanoAccessor<Grid<>,nanovdb::FloatGrid>(gridsFloat,nanoFloatMap1,typePointer::DEVICE,1);
             getAllNanoAccessor<Grid<>,nanovdb::FloatGrid>(gridsFloat,nanoFloatMap2,typePointer::DEVICE,2);
             //Hacer aqui bien de laplacianos
             //average(nanoFloatMap1.at("EndothelialDiscrete"),nanoFloatMap1.at("Oxygen"),nodeCount);
+
             
         }
         
@@ -281,6 +287,8 @@ int main(int argc ,char * argv[]){
                 copy(nanoFloatMap1.at("Bplus"),nanoFloatMap1.at("Oxygen"),nodeCount);
                 //generateEndothelial(nanoFloatMap1.at("Oxygen"),nodeCount,-39,-130,5);
             }
+            degradeOxygen(gridFloatRead->at("Oxygen"),gridFloatWrite->at("TummorCells"),0.4,nodeCount);
+
 
         }
 
@@ -306,9 +314,13 @@ int main(int argc ,char * argv[]){
             average(gridFloatWrite->at("TummorCells"),gridFloatRead->at("Bplus"),nodeCount);
             copy(gridFloatRead->at("Bplus"),gridFloatWrite->at("TummorCells"),nodeCount);
         }
-        degradeOxygen(gridFloatRead->at("Oxygen"),gridFloatWrite->at("TummorCells"),nodeCount);
         
-
+        addDeadCells(gridFloatRead->at("Bminus"),gridFloatRead->at("DeadCells"),nodeCount);
+        
+        // for(int j = 0;j<5;j++){
+        //     average(gridFloatWrite->at("Oxygen"),gridFloatRead->at("Bplus"),nodeCount);
+        //     copy(gridFloatRead->at("Bplus"),gridFloatWrite->at("Oxygen"),nodeCount);
+        // }
         
         
         

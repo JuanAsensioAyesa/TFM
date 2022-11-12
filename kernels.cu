@@ -1213,8 +1213,8 @@ void addMax(nanovdb::FloatGrid * gridTAF, float maxValue,uint64_t leafCount){
     thrust::counting_iterator<uint64_t, thrust::device_system_tag> iter(0);
     thrust::for_each(iter, iter + 512*leafCount, kernel);
 }
-void degradeOxygen(nanovdb::FloatGrid * gridOxygen, nanovdb::FloatGrid * gridTummor,uint64_t leafCount){
-    auto kernel = [gridOxygen,gridTummor] __device__ (const uint64_t n) {
+void degradeOxygen(nanovdb::FloatGrid * gridOxygen, nanovdb::FloatGrid * gridTummor,float factor,uint64_t leafCount){
+    auto kernel = [gridOxygen,gridTummor,factor] __device__ (const uint64_t n) {
        // auto *leaf_d = grid_d->tree().getFirstNode<0>() + (n >> 9);// this only works if grid->isSequential<0>() == true
         auto *leaf_Oxygen = gridOxygen->tree().getFirstNode<0>() + (n >> 9);// this only works if grid->isSequential<0>() == true
         auto *leaf_Tummor = gridTummor->tree().getFirstNode<0>() + (n >> 9);// this only works if grid->isSequential<0>() == true
@@ -1225,7 +1225,7 @@ void degradeOxygen(nanovdb::FloatGrid * gridOxygen, nanovdb::FloatGrid * gridTum
         //auto coord = leaf_d->offsetToGlobalCoord(i);
 
         
-        float new_value = leaf_Oxygen->getValue(i) - leaf_Tummor->getValue(i) * 0.1;
+        float new_value = leaf_Oxygen->getValue(i) - leaf_Tummor->getValue(i)* factor;
         if(new_value < 0 ){
             new_value = 0 ;
         }
@@ -1331,7 +1331,26 @@ void equationBminusSimple(nanovdb::FloatGrid* gridTumor,nanovdb::FloatGrid* grid
     thrust::counting_iterator<uint64_t, thrust::device_system_tag> iter(0);
     thrust::for_each(iter, iter + 512*leafCount, kernel);
 }
+void addDeadCells(nanovdb::FloatGrid* gridBminus,nanovdb::FloatGrid* gridDeadCells,u_int64_t leafCount){
+    auto kernel = [gridDeadCells,gridBminus] __device__ (const uint64_t n) {
+        auto *leaf_DeadCells = gridDeadCells->tree().getFirstNode<0>() + (n >> 9);
+        auto *leaf_Bminus = gridBminus->tree().getFirstNode<0>() + (n >> 9);
+        //auto *leaf_Oxygen = gridOxygen->tree().getFirstNode<0>() + (n >> 9);
+        
+        const int i = n & 511;
+        auto coord = leaf_DeadCells->offsetToGlobalCoord(i);
 
+        float currentDead = leaf_DeadCells->getValue(i);
+        float new_data = currentDead + leaf_Bminus->getValue(i);
+        if(new_data>2){
+            new_data = 2;
+        }
+        leaf_DeadCells->setValue(coord,new_data);
+
+    };
+    thrust::counting_iterator<uint64_t, thrust::device_system_tag> iter(0);
+    thrust::for_each(iter, iter + 512*leafCount, kernel);
+}
 void equationPressure(nanovdb::FloatGrid* gridTumor,nanovdb::FloatGrid* gridPressure,u_int64_t leafCount){
     auto kernel = [gridTumor,gridPressure] __device__ (const uint64_t n) {
         auto *leaf_Tumor = gridTumor->tree().getFirstNode<0>() + (n >> 9);
@@ -1410,7 +1429,7 @@ void equationTumorSimple(nanovdb::Vec3fGrid* gridFlux,nanovdb::FloatGrid* gridBp
         // if(factor_divergence!=0){
         //     //printf("%f %f\n",factor_divergence,b_plus);
         // }
-        float derivative = factor_divergence + b_plus ;//+ b_minus;
+        float derivative = factor_divergence + b_plus + b_minus;
         // if(derivative < 0 ) {
         //     derivative  = 0 ;
         // }

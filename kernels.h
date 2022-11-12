@@ -37,6 +37,8 @@ void discretize(nanovdb::FloatGrid* grid,u_int64_t leafCount);
 void average(nanovdb::FloatGrid* grid,nanovdb::FloatGrid* destiny,u_int64_t leafCount);
 void copy(nanovdb::FloatGrid* source ,nanovdb::FloatGrid* destiny,u_int64_t leafCount);
 void albedoHemogoblin(nanovdb::FloatGrid* oxygen,nanovdb::Vec3fGrid* albedo,u_int64_t leafCount);
-void degradeOxygen(nanovdb::FloatGrid * gridOxygen, nanovdb::FloatGrid * gridTummor,uint64_t leafCount);
+void degradeOxygen(nanovdb::FloatGrid * gridOxygen, nanovdb::FloatGrid * gridTummor,float factor,uint64_t leafCount);
+void addDeadCells(nanovdb::FloatGrid* gridBminus,nanovdb::FloatGrid* gridDeadCells,u_int64_t leafCount);
+
 
 #endif
