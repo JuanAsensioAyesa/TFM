@@ -560,15 +560,23 @@ void factorEndothelial(nanovdb::FloatGrid * grid_s,nanovdb::FloatGrid * grid_d,u
         const int i = n & 511;
               
         auto coord = leaf_d->offsetToGlobalCoord(i);
-
+        auto coord_s = leaf_s->offsetToGlobalCoord(i);
+        
         nanovdb::CurvatureStencil<nanovdb::FloatGrid> stencilNano(*grid_s);
-        stencilNano.moveTo(coord);
+        stencilNano.moveTo(coord_s);
         float old_n = leaf_s->getValue(coord);
         float laplacian = stencilNano.laplacian();
         ////printf("%f\n",laplacian);
         float factorEndothelial = laplacian * 0.0003 ;
+        float new_value = old_n+factorEndothelial * time_factor;
+        if(new_value > 1){
+            new_value = 1;
+        }
+        if(new_value  <0 ){
+            new_value = 0;
+        }
 
-        leaf_d->setValueOnly(coord,old_n-factorEndothelial * time_factor);
+        leaf_d->setValueOnly(coord,new_value);
     };
     thrust::counting_iterator<uint64_t, thrust::device_system_tag> iter(0);
     thrust::for_each(iter, iter + 512*leafCount, kernel);
@@ -595,6 +603,12 @@ void factorTAF(nanovdb::FloatGrid * grid_s,nanovdb::FloatGrid * grid_d,nanovdb::
         float factorTAF = gradientTAF[0][0] + gradientTAF[1][1] + gradientTAF[2][2];
 
         float new_n = current_n - factorTAF * time_factor;
+        if(new_n > 1){
+            new_n = 1;
+        }
+        if(new_n < 0 ){
+            new_n = 0;
+        }
         leaf_d->setValueOnly(coord,new_n);
         
 
@@ -616,7 +630,14 @@ void factorFibronectin(nanovdb::FloatGrid * grid_s,nanovdb::FloatGrid * grid_d,n
         auto gradientFibronectin = stencilFibronectin.gradient();
         float factorFibronectin = gradientFibronectin[0][0] + gradientFibronectin[1][1] + gradientFibronectin[2][2];
         factorFibronectin = factorFibronectin * 0.28;
-        leaf_d->setValueOnly(coord,current_n-factorFibronectin*time_factor);
+        float new_value = current_n-factorFibronectin*time_factor;
+        if(new_value < 0 ){
+            new_value = 0;
+        }
+        if(new_value > 1){
+            new_value = 1;
+        }
+        leaf_d->setValueOnly(coord,new_value);
 
     };
     thrust::counting_iterator<uint64_t, thrust::device_system_tag> iter(0);
@@ -942,19 +963,6 @@ void newTips(nanovdb::FloatGrid* gridEndothelialTip,nanovdb::FloatGrid* gridTAF,
                 //printf("NEW TIP\n");
                  leaf_tip->setValueOnly(coord,1.0);
                  //leaf_d->setValueOnly(coord,1.0);
-            }else if(taf_value >= 0.5&& random >= 1-vector_probabilidades[1]){
-                //printf("NEW TIP\n");
-                 leaf_tip->setValueOnly(coord,1.0);
-                 //leaf_d->setValueOnly(coord,1.0);
-            }else if(taf_value >=0.3&& random >= 1-vector_probabilidades[0]){
-                //printf("NEW TIP\n");
-                 leaf_tip->setValueOnly(coord,1.0);
-                 //leaf_d->setValueOnly(coord,1.0);
-            }else{
-                //NO hay branch
-                leaf_tip->setValue(coord_d,0.0);
-                new_value = 0;
-                //leaf_tip->setValueOnly(coord,0.0);
             }
         }
     };
@@ -1133,18 +1141,20 @@ void laplacian(nanovdb::FloatGrid * grid_s,nanovdb::FloatGrid * grid_d, uint64_t
         stencil.moveTo(coord_nano);
         auto old_value = leaf_s->getValue(i);
         auto laplacian = stencil.laplacian();
-        if(laplacian < 0.0){
-            laplacian=0.0;
-        }
+        // if(laplacian < 0.0){
+        //     laplacian=0.0;
+        // }
         // if(laplacian!= 0){
         //     //printf("%f\n",laplacian);
         // }
-        auto new_value = old_value + laplacian*0.1;
+        auto new_value = old_value + laplacian* 0.0003;
 
-        // if(new_value < 0 ){
-        //     new_value = 0;
-        // }
-        
+        if(new_value < 0 ){
+            new_value = 0;
+        }
+        if(new_value > 1){
+            new_value = 1;
+        }        
         leaf_d->setValueOnly(i,new_value);
     };
     thrust::counting_iterator<uint64_t, thrust::device_system_tag> iter(0);
