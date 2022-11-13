@@ -490,7 +490,7 @@ void equationEndothelial(nanovdb::FloatGrid * grid_s,nanovdb::FloatGrid * grid_d
         float old_n = leaf_s->getValue(coord_nano);
         float laplacian = stencilNano.laplacian();
         ////printf("%f\n",laplacian);
-        float factorEndothelial = laplacian * 0.0003 ;
+        float factorEndothelial = laplacian * 0.0003  ;
         /*
             Segunda parte, chimiotaxis TAF
         */
@@ -567,7 +567,7 @@ void factorEndothelial(nanovdb::FloatGrid * grid_s,nanovdb::FloatGrid * grid_d,u
         float old_n = leaf_s->getValue(coord);
         float laplacian = stencilNano.laplacian();
         ////printf("%f\n",laplacian);
-        float factorEndothelial = laplacian * 0.0003 ;
+        float factorEndothelial = laplacian * 0.0003 * 1e-9;
         float new_value = old_n+factorEndothelial * time_factor;
         if(new_value > 1){
             new_value = 1;
@@ -1057,7 +1057,7 @@ void generateGradientTAF(nanovdb::FloatGrid * gridTAF,nanovdb::FloatGrid * gridT
         auto gradient = stencilNano.gradient();
         float sensivity = chemotacticSensivity(leaf_s->getValue(i));
         
-        gradient = gradient *sensivity;
+        gradient = gradient *sensivity * 1e-4;
         // if(coord[0]== 0 || coord[1]==0||coord[2]==0){
         //     gradient[0] = 0;
         //     gradient[1] = 0 ;
@@ -1147,14 +1147,14 @@ void laplacian(nanovdb::FloatGrid * grid_s,nanovdb::FloatGrid * grid_d, uint64_t
         // if(laplacian!= 0){
         //     //printf("%f\n",laplacian);
         // }
-        auto new_value = old_value + laplacian* 0.0003;
+        auto new_value = old_value + laplacian* 1e-7;
 
-        if(new_value < 0 ){
-            new_value = 0;
-        }
-        if(new_value > 1){
-            new_value = 1;
-        }        
+        // if(new_value < 0 ){
+        //     new_value = 0;
+        // }
+        // if(new_value > 1){
+        //     new_value = 1;
+        // }        
         leaf_d->setValueOnly(i,new_value);
     };
     thrust::counting_iterator<uint64_t, thrust::device_system_tag> iter(0);

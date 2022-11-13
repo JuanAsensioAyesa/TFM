@@ -429,7 +429,7 @@ int main(int argc,char * argv[]){
     // generateGradientFibronectin(gridFibronectin.getPtrNano1(typePointer::DEVICE),gridEndothelial.getPtrNano1(typePointer::DEVICE),gridGradienteFibronectin.getPtrNano2(typePointer::DEVICE),nodeCount);
     // generateGradientTAF(gridTAF.getPtrNano1(typePointer::DEVICE),gridEndothelial.getPtrNano1(typePointer::DEVICE),gridGradienteTAF.getPtrNano2(typePointer::DEVICE),nodeCount);
     
-    for(int i = 0 ;i<2;i++){
+    for(int i = 0 ;i<500;i++){
         //std::cout<<i<<std::endl;
         if(i%2 == 0 ){
             gridReadTAF = gridTAF.getPtrNano1(typePointer::DEVICE);

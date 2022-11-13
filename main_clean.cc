@@ -246,10 +246,10 @@ int main(int argc ,char * argv[]){
     std::cout<<"Ey"<<std::endl;
     createRectangle(accessor_tummor_1,esquina_izquierda,tamanio_tumor,1.0);
     createRectangle(accessor_tummor_2,esquina_izquierda,tamanio_tumor,1.0);
-    auto accesor_Endothelial_1 = gridsFloat["Endothelial"]->getAccessorOpen1();
-    auto accesor_Endothelial_2 = gridsFloat["Endothelial"]->getAccessorOpen2();
+    auto accesor_Endothelial_1 = gridsFloat["Bplus"]->getAccessorOpen1();
+    //auto accesor_Endothelial_2 = gridsFloat["Bplus"]->getAccessorOpen2();
     createRectangle(accesor_Endothelial_1,esquina_izquierda,20,1.0);
-    createRectangle(accesor_Endothelial_2,esquina_izquierda,20,1.0);
+    //createRectangle(accesor_Endothelial_2,esquina_izquierda,20,1.0);
     //createRectangle(accessor_Dead_1,esquina_izquierda,tamanio_tumor,0.1);
     //createRectangle(accessor_tummor_2,esquina_izquierda,tamanio_tumor,1.0);
     
@@ -282,9 +282,10 @@ int main(int argc ,char * argv[]){
 
             }
             prevMaxDiscrete = resolvePoisson(gridsFloat,i,"EndothelialDiscrete","Oxygen",newTreeOxygen);
-            prevMaxTummor = resolvePoisson(gridsFloat,i,"DeadCells","TAF",newTreeTAF);
+            prevMaxTummor = resolvePoisson(gridsFloat,i,"Bplus","TAF",newTreeTAF);
             getAllNanoAccessor<Grid<>,nanovdb::FloatGrid>(gridsFloat,nanoFloatMap1,typePointer::DEVICE,1);
             getAllNanoAccessor<Grid<>,nanovdb::FloatGrid>(gridsFloat,nanoFloatMap2,typePointer::DEVICE,2);
+            gridsFloat["Bplus"]->fillValue(0.0);
             //Hacer aqui bien de laplacianos
             //average(nanoFloatMap1.at("EndothelialDiscrete"),nanoFloatMap1.at("Oxygen"),nodeCount);
 
@@ -314,32 +315,32 @@ int main(int argc ,char * argv[]){
 
         equationMDE(gridFloatRead->at("EndothelialDiscrete"),gridFloatRead->at("MDE"),gridFloatWrite->at("MDE"),nodeCount);
         equationFibronectin(gridFloatRead->at("EndothelialDiscrete"),gridFloatRead->at("Fibronectin"),gridFloatRead->at("MDE"),gridFloatWrite->at("Fibronectin"),nodeCount);
-        equationTAF(gridFloatRead->at("EndothelialDiscrete"),gridFloatRead->at("TAF"),gridFloatWrite->at("TAF"),nodeCount);
+        //equationTAF(gridFloatRead->at("EndothelialDiscrete"),gridFloatRead->at("TAF"),gridFloatWrite->at("TAF"),nodeCount);
         product(gridFloatRead->at("TAF"),gridFloatRead->at("Endothelial"),gridFloatRead->at("TAFEndothelial"),nodeCount);
         
-        laplacian(gridFloatRead->at("Endothelial"),gridFloatWrite->at("Endothelial"),nodeCount);
+        //laplacian(gridFloatRead->at("Endothelial"),gridFloatWrite->at("Endothelial"),nodeCount);
         //std::cout<<"Read "<<gridFloatRead->at("Endothelial")<<" Write "<<gridFloatWrite->at("Endothelial")<<std::endl;
-        //factorEndothelial(gridFloatRead->at("Endothelial"),gridFloatWrite->at("Endothelial"),nodeCount);
+        factorEndothelial(gridFloatRead->at("Endothelial"),gridFloatWrite->at("Endothelial"),nodeCount);
         generateGradientTAF(gridFloatRead->at("TAF"),gridFloatRead->at("TAFEndothelial"),nanoVecMap.at("vecGrid"),nodeCount);
-        //factorTAF(gridFloatRead->at("Endothelial"),gridFloatWrite->at("Endothelial"),gridFloatRead->at("TAF"),nanoVecMap.at("vecGrid"),nodeCount);
-        generateGradientFibronectin(gridFloatRead->at("Fibronectin"),gridFloatRead->at("EndothelialDiscrete"),nanoVecMap.at("vecGrid"),nodeCount);
+        factorTAF(gridFloatRead->at("Endothelial"),gridFloatWrite->at("Endothelial"),gridFloatRead->at("TAF"),nanoVecMap.at("vecGrid"),nodeCount);
+        //generateGradientFibronectin(gridFloatRead->at("Fibronectin"),gridFloatRead->at("EndothelialDiscrete"),nanoVecMap.at("vecGrid"),nodeCount);
         //factorFibronectin(gridFloatRead->at("Endothelial"),gridFloatWrite->at("Endothelial"),gridFloatRead->at("Fibronectin"),nanoVecMap.at("vecGrid"),nodeCount);
-        equationEndothelialDiscrete(gridFloatRead->at("EndothelialDiscrete"),gridFloatWrite->at("EndothelialDiscrete"),gridFloatRead->at("Endothelial"),gridFloatWrite->at("Endothelial"),gridFloatRead->at("TAF"),gridFloatRead->at("TipEndothelial"),gridFloatWrite->at("TipEndothelial"),seed,nodeCount);
-        branching(gridFloatWrite->at("TipEndothelial"),gridFloatRead->at("TAF"),seed,nodeCount);
+        // equationEndothelialDiscrete(gridFloatRead->at("EndothelialDiscrete"),gridFloatWrite->at("EndothelialDiscrete"),gridFloatRead->at("Endothelial"),gridFloatWrite->at("Endothelial"),gridFloatRead->at("TAF"),gridFloatRead->at("TipEndothelial"),gridFloatWrite->at("TipEndothelial"),seed,nodeCount);
+        // branching(gridFloatWrite->at("TipEndothelial"),gridFloatRead->at("TAF"),seed,nodeCount);
 
-        equationBplusSimple(gridFloatRead->at("TummorCells"),gridFloatRead->at("Bplus"),gridFloatRead->at("Oxygen"),nodeCount);
-        equationBminusSimple(gridFloatRead->at("TummorCells"),gridFloatRead->at("Bminus"),gridFloatRead->at("Oxygen"),nodeCount);
-        equationPressure(gridFloatRead->at("TummorCells"),gridFloatRead->at("Pressure"),nodeCount);
-        equationFluxSimple(gridFloatRead->at("Pressure"),gridFloatRead->at("TummorCells"),nanoVecMap.at("vecGrid"),gridFloatRead->at("Diffusion"),nodeCount);
-        equationTumorSimple(nanoVecMap.at("vecGrid"),gridFloatRead->at("Bplus"),gridFloatRead->at("Bminus"),gridFloatRead->at("TummorCells"),gridFloatWrite->at("TummorCells"),nodeCount);
-        for(int j = 0 ;j<1;j++){
-            average(gridFloatWrite->at("TummorCells"),gridFloatRead->at("Bplus"),nodeCount);
-            copy(gridFloatRead->at("Bplus"),gridFloatWrite->at("TummorCells"),nodeCount);
-        }
+        // equationBplusSimple(gridFloatRead->at("TummorCells"),gridFloatRead->at("Bplus"),gridFloatRead->at("Oxygen"),nodeCount);
+        // equationBminusSimple(gridFloatRead->at("TummorCells"),gridFloatRead->at("Bminus"),gridFloatRead->at("Oxygen"),nodeCount);
+        // equationPressure(gridFloatRead->at("TummorCells"),gridFloatRead->at("Pressure"),nodeCount);
+        // equationFluxSimple(gridFloatRead->at("Pressure"),gridFloatRead->at("TummorCells"),nanoVecMap.at("vecGrid"),gridFloatRead->at("Diffusion"),nodeCount);
+        // equationTumorSimple(nanoVecMap.at("vecGrid"),gridFloatRead->at("Bplus"),gridFloatRead->at("Bminus"),gridFloatRead->at("TummorCells"),gridFloatWrite->at("TummorCells"),nodeCount);
+        // for(int j = 0 ;j<1;j++){
+        //     average(gridFloatWrite->at("TummorCells"),gridFloatRead->at("Bplus"),nodeCount);
+        //     copy(gridFloatRead->at("Bplus"),gridFloatWrite->at("TummorCells"),nodeCount);
+        // }
         
-        //newTips(gridFloatRead->at("TipEndothelial"),gridFloatRead->at("TAF"),gridFloatRead->at("EndothelialDiscrete"),seed,nodeCount);
+        // //newTips(gridFloatRead->at("TipEndothelial"),gridFloatRead->at("TAF"),gridFloatRead->at("EndothelialDiscrete"),seed,nodeCount);
 
-        addDeadCells(gridFloatRead->at("Bminus"),gridFloatRead->at("DeadCells"),nodeCount);
+        // addDeadCells(gridFloatRead->at("Bminus"),gridFloatRead->at("DeadCells"),nodeCount);
         //degradeOxygen(gridFloatRead->at("Oxygen"),gridFloatWrite->at("TummorCells"),0.035,nodeCount);
 
         // for(int j = 0;j<5;j++){
