@@ -39,7 +39,8 @@ void copy(nanovdb::FloatGrid* source ,nanovdb::FloatGrid* destiny,u_int64_t leaf
 void albedoHemogoblin(nanovdb::FloatGrid* oxygen,nanovdb::Vec3fGrid* albedo,u_int64_t leafCount);
 void degradeOxygen(nanovdb::FloatGrid * gridOxygen, nanovdb::FloatGrid * gridTummor,float factor,uint64_t leafCount);
 void addDeadCells(nanovdb::FloatGrid* gridBminus,nanovdb::FloatGrid* gridDeadCells,u_int64_t leafCount);
-void newTips(nanovdb::FloatGrid* gridEndothelialTip,nanovdb::FloatGrid* gridTAF,nanovdb::FloatGrid* gridEndothelialDiscrete,int seed,int leafCount);
-
+void newTips(nanovdb::FloatGrid* gridEndothelialTip,nanovdb::FloatGrid* gridEndothelialDiscrete,nanovdb::FloatGrid* gridTAF,int seed,int leafCount);
+void closeTips(nanovdb::FloatGrid* gridEndothelialTip, nanovdb::FloatGrid* gridTummorCells,uint64_t leafCount);
+void degradeDiscrete(nanovdb::FloatGrid* gridEndothelialDiscrete, nanovdb::FloatGrid* gridTummorCells,uint64_t leafCount);
 
 #endif

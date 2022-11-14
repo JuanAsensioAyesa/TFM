@@ -248,7 +248,7 @@ void equationMDE(nanovdb::FloatGrid* input_grid_endothelial,nanovdb::FloatGrid* 
         ////printf("%f %f %f\n",production_rate,diffussion_coefficient,degradation_rate);
         nanovdb::CurvatureStencil<nanovdb::FloatGrid> stencilNano(*input_grid_MDE);
         stencilNano.moveTo(coord);
-        float laplacian = stencilNano.laplacian();
+        float laplacian = stencilNano.laplacian() ;
         esVecino = accessor_endothelial.getValue(coord)==1.0;
         if(esVecino){
             n_i = 1.0;
@@ -257,6 +257,7 @@ void equationMDE(nanovdb::FloatGrid* input_grid_endothelial,nanovdb::FloatGrid* 
         }
         float old_mde = leaf_s->getValue(i);
         float derivative = n_i * production_rate + diffussion_coefficient * laplacian * old_mde - degradation_rate * old_mde;
+        derivative *= 1e-9;
         // float factor_1 = n_i * production_rate;
         // float factor_2 = diffussion_coefficient * laplacian * old_mde;
         // float factor_3 = degradation_rate * old_mde;
@@ -567,7 +568,7 @@ void factorEndothelial(nanovdb::FloatGrid * grid_s,nanovdb::FloatGrid * grid_d,u
         float old_n = leaf_s->getValue(coord);
         float laplacian = stencilNano.laplacian();
         ////printf("%f\n",laplacian);
-        float factorEndothelial = laplacian * 0.0003 * 1e-9;
+        float factorEndothelial = laplacian * 0.0003 * 1e-4;
         float new_value = old_n+factorEndothelial * time_factor;
         if(new_value > 1){
             new_value = 1;
@@ -934,10 +935,11 @@ void equationEndothelialDiscrete(nanovdb::FloatGrid * grid_source_discrete,nanov
     thrust::counting_iterator<uint64_t, thrust::device_system_tag> iter(0);
     thrust::for_each(iter, iter + 512*leafCount, kernel);
 }
-void newTips(nanovdb::FloatGrid* gridEndothelialTip,nanovdb::FloatGrid* gridTAF,nanovdb::FloatGrid* gridEndothelialDiscrete,int seed,int leafCount){
+void newTips(nanovdb::FloatGrid* gridEndothelialTip,nanovdb::FloatGrid* gridEndothelialDiscrete,nanovdb::FloatGrid* gridTAF,int seed,int leafCount){
     auto kernel = [gridEndothelialTip,gridTAF,gridEndothelialDiscrete,seed] __device__ (const uint64_t n) {
         auto* leaf_tip = gridEndothelialTip->tree().getFirstNode<0>() + (n >> 9);
         auto* leaf_taf = gridTAF->tree().getFirstNode<0>() + (n >> 9);
+        auto* leaf_discrete = gridEndothelialDiscrete->tree().getFirstNode<0>() + (n >> 9);
         const int i = n & 511;
 
         thrust::minstd_rand rng;
@@ -952,16 +954,18 @@ void newTips(nanovdb::FloatGrid* gridEndothelialTip,nanovdb::FloatGrid* gridTAF,
         float value = leaf_tip->getValue(i);
         float taf_value = leaf_taf->getValue(i);
         float new_value = 1;
-        float vector_probabilidades[] = {0.04,0.06,0.08,0.2};
+        float vector_probabilidades[] = {0.02,0.03,0.04,0.08};
 
         if(isNextToEndothelialDiscrete(coord_d,gridEndothelialDiscrete)){
             if(taf_value >= 0.8 && random >= 1.0-vector_probabilidades[3]){
                 //printf("NEW TIP\n");
                  leaf_tip->setValueOnly(coord,1.0);
+                 leaf_discrete->setValueOnly(coord,1.0);
                  //leaf_d->setValueOnly(coord,1.0);
             }else if(taf_value >=0.7 && random >= 1-vector_probabilidades[2] ){
                 //printf("NEW TIP\n");
                  leaf_tip->setValueOnly(coord,1.0);
+                 leaf_discrete->setValueOnly(coord,1.0);
                  //leaf_d->setValueOnly(coord,1.0);
             }
         }
@@ -1014,6 +1018,8 @@ void branching(nanovdb::FloatGrid* gridEndothelialTip,nanovdb::FloatGrid* gridTA
             }
         }else if(value == 2){
             new_value = value -1;
+        }else{
+            new_value = value;
         }
         
 
@@ -1096,7 +1102,7 @@ void generateGradientFibronectin(nanovdb::FloatGrid * gridFibronectin,nanovdb::F
         auto gradient = stencilNano.gradient();
         
         float endothelialValue = leaf_Endothelial->getValue(i);
-        gradient = gradient  * endothelialValue;
+        gradient = gradient  * endothelialValue * 1e-7;
         
         leaf_Gradient->setValueOnly(coord,gradient);
 
@@ -1620,8 +1626,40 @@ void albedoHemogoblin(nanovdb::FloatGrid* oxygen,nanovdb::Vec3fGrid* albedo,u_in
     thrust::counting_iterator<uint64_t, thrust::device_system_tag> iter(0);
     thrust::for_each(iter, iter + 512*leafCount, kernel);
 }
+void closeTips(nanovdb::FloatGrid* gridEndothelialTip, nanovdb::FloatGrid* gridTummorCells,uint64_t leafCount){
+    auto kernel = [gridEndothelialTip,gridTummorCells] __device__ (const uint64_t n) {
+        auto *leaf_endothelial= gridEndothelialTip->tree().getFirstNode<0>() + (n >> 9);
+        auto *leaf_tummor = gridTummorCells->tree().getFirstNode<0>() + (n >> 9);
+        const int i = n & 511;
+        auto coord = leaf_endothelial->offsetToGlobalCoord(i);
+        float tummorDensity = leaf_tummor->getValue(coord);
+        if(tummorDensity > 0.6){
+            leaf_endothelial->setValueOnly(coord,0);
+        }else{
+            leaf_endothelial->setValueOnly(coord,leaf_endothelial->getValue(coord));
+        }
 
+    };
+    thrust::counting_iterator<uint64_t, thrust::device_system_tag> iter(0);
+    thrust::for_each(iter, iter + 512*leafCount, kernel);
+}
 
+void degradeDiscrete(nanovdb::FloatGrid* gridEndothelialDiscrete, nanovdb::FloatGrid* gridTummorCells,uint64_t leafCount){
+    auto kernel = [gridEndothelialDiscrete,gridTummorCells] __device__ (const uint64_t n) {
+        auto *leaf_endothelial= gridEndothelialDiscrete->tree().getFirstNode<0>() + (n >> 9);
+        auto *leaf_tummor = gridTummorCells->tree().getFirstNode<0>() + (n >> 9);
+        const int i = n & 511;
+        auto coord = leaf_tummor->offsetToGlobalCoord(i);
+        float tummorDensity = leaf_tummor->getValue(coord);
+        if(tummorDensity > 0.75){
+            leaf_endothelial->setValueOnly(coord,0);
+        }else{
+            leaf_endothelial->setValueOnly(coord,leaf_endothelial->getValue(coord));
+        }
+    };
+    thrust::counting_iterator<uint64_t, thrust::device_system_tag> iter(0);
+    thrust::for_each(iter, iter + 512*leafCount, kernel);
+}
 // void baseSkinColor(nanovdb::FloatGrid* melaninConcentration,nanovdb::Vec3fGrid* skinColor,u_int64_t leafCount){
 //     auto kernel = [melaninConcentration,skinColor] __device__ (const uint64_t n) {
 //         auto* leaf_Melanin = melaninConcentration->tree().getFirstNode<0>() + (n >> 9);
