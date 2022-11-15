@@ -1633,7 +1633,7 @@ void closeTips(nanovdb::FloatGrid* gridEndothelialTip, nanovdb::FloatGrid* gridT
         const int i = n & 511;
         auto coord = leaf_endothelial->offsetToGlobalCoord(i);
         float tummorDensity = leaf_tummor->getValue(coord);
-        if(tummorDensity > 0.6){
+        if(tummorDensity > 0.9){
             leaf_endothelial->setValueOnly(coord,0);
         }else{
             leaf_endothelial->setValueOnly(coord,leaf_endothelial->getValue(coord));
@@ -1651,7 +1651,7 @@ void degradeDiscrete(nanovdb::FloatGrid* gridEndothelialDiscrete, nanovdb::Float
         const int i = n & 511;
         auto coord = leaf_tummor->offsetToGlobalCoord(i);
         float tummorDensity = leaf_tummor->getValue(coord);
-        if(tummorDensity > 0.75){
+        if(tummorDensity > 0.9){
             leaf_endothelial->setValueOnly(coord,0);
         }else{
             leaf_endothelial->setValueOnly(coord,leaf_endothelial->getValue(coord));

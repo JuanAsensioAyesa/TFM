@@ -52,9 +52,9 @@ void copyAll(std::map<std::string,gridClass*>& map){
     }
 }
 template<class gridClass>
-void writeAll(std::map<std::string,gridClass*>& map){
+void writeAll(std::map<std::string,gridClass*>& map,std::string auxAppend=""){
     for(auto it = map.begin();it != map.end();it++){
-        it->second->writeToFile("../grids/new/"+it->first+".vdb");
+        it->second->writeToFile("../grids/new/"+it->first+auxAppend+".vdb");
     }
 }
 template<class gridClass,class accessor>
@@ -167,8 +167,12 @@ int main(int argc ,char * argv[]){
     int n_veces = 10;
     int size_lado = 250;
     int profundidad_total = 150;
+    int numStepSave = 0;
     if(argc > 1){
         n_veces = atoi(argv[1]);
+    }
+    if(argc > 2){
+        numStepSave = atoi(argv[2]);
     }
     std::map<std::string,Grid<>*> gridsFloat ;
     std::map<std::string,Grid<Vec3,nanovdb::Vec3f,Vec3Open,Vec3Open::Ptr,Vec3Nano>*>gridsVec;
@@ -311,7 +315,7 @@ int main(int argc ,char * argv[]){
             generateEndothelial(nanoFloatMap1.at("Oxygen"),nodeCount,-35,-130,5);
             degradeOxygen(gridFloatRead->at("Oxygen"),gridFloatWrite->at("TummorCells"),0.4,nodeCount);
             newTips(gridFloatRead->at("TipEndothelial"),gridFloatRead->at("EndothelialDiscrete"),gridFloatRead->at("TAF"),seed,nodeCount);
-            degradeDiscrete(gridFloatRead->at("EndothelialDiscrete"),gridFloatRead->at("TummorCells"),nodeCount);
+            //degradeDiscrete(gridFloatRead->at("EndothelialDiscrete"),gridFloatRead->at("TummorCells"),nodeCount);
         }
 
         equationMDE(gridFloatRead->at("EndothelialDiscrete"),gridFloatRead->at("MDE"),gridFloatWrite->at("MDE"),nodeCount);
@@ -321,6 +325,8 @@ int main(int argc ,char * argv[]){
         
         //laplacian(gridFloatRead->at("Endothelial"),gridFloatWrite->at("Endothelial"),nodeCount);
         //std::cout<<"Read "<<gridFloatRead->at("Endothelial")<<" Write "<<gridFloatWrite->at("Endothelial")<<std::endl;
+        closeTips(gridFloatRead->at("TipEndothelial"),gridFloatRead->at("TummorCells"),nodeCount);
+
         factorEndothelial(gridFloatRead->at("Endothelial"),gridFloatWrite->at("Endothelial"),nodeCount);
         generateGradientTAF(gridFloatRead->at("TAF"),gridFloatRead->at("TAFEndothelial"),nanoVecMap.at("vecGrid"),nodeCount);
         factorTAF(gridFloatRead->at("Endothelial"),gridFloatWrite->at("Endothelial"),gridFloatRead->at("TAF"),nanoVecMap.at("vecGrid"),nodeCount);
@@ -342,7 +348,6 @@ int main(int argc ,char * argv[]){
         // //newTips(gridFloatRead->at("TipEndothelial"),gridFloatRead->at("TAF"),gridFloatRead->at("EndothelialDiscrete"),seed,nodeCount);
 
         addDeadCells(gridFloatRead->at("Bminus"),gridFloatRead->at("DeadCells"),nodeCount);
-        closeTips(gridFloatRead->at("TipEndothelial"),gridFloatRead->at("TummorCells"),nodeCount);
         //degradeOxygen(gridFloatRead->at("Oxygen"),gridFloatWrite->at("TummorCells"),0.035,nodeCount);
 
         // for(int j = 0;j<5;j++){
@@ -351,7 +356,23 @@ int main(int argc ,char * argv[]){
         // }
         
         
+        if(numStepSave > 0 && i % numStepSave == 0 ){
+            std::string aux;
+            aux = std::to_string(i);
+            downloadAll<Grid<>>(gridsFloat,floatNames);
+            downloadAll<Grid<Vec3,nanovdb::Vec3f,Vec3Open,Vec3Open::Ptr,Vec3Nano>>(gridsVec,vecNames);
+            copyAll<Grid<Vec3,nanovdb::Vec3f,Vec3Open,Vec3Open::Ptr,Vec3Nano>>(gridsVec);
+            copyAll<Grid<>>(gridsFloat);
+            writeAll<Grid<>>(gridsFloat,aux);
+            copyAll<Grid<Vec3,nanovdb::Vec3f,Vec3Open,Vec3Open::Ptr,Vec3Nano>>(gridsVec);
+            writeAll<Grid<Vec3,nanovdb::Vec3f,Vec3Open,Vec3Open::Ptr,Vec3Nano>>(gridsVec,aux);
+            uploadAll<Grid<>>(gridsFloat,floatNames);
+            uploadAll<Grid<Vec3,nanovdb::Vec3f,Vec3Open,Vec3Open::Ptr,Vec3Nano>>(gridsVec,vecNames);
+            getAllNanoAccessor<Grid<Vec3,nanovdb::Vec3f,Vec3Open,Vec3Open::Ptr,Vec3Nano>,nanovdb::Vec3fGrid>(gridsVec,nanoVecMap,typePointer::DEVICE,1);
+            getAllNanoAccessor<Grid<>,nanovdb::FloatGrid>(gridsFloat,nanoFloatMap1,typePointer::DEVICE,1);
+            getAllNanoAccessor<Grid<>,nanovdb::FloatGrid>(gridsFloat,nanoFloatMap2,typePointer::DEVICE,2);
         
+        }
     }
     
 
