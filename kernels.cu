@@ -409,7 +409,7 @@ __device__ float average(nanovdb::Coord coord,nanovdb::FloatGrid * input_grid,ui
     auto* leaf = input_grid->tree().getFirstNode<0>() + (n >> 9);
     //int desplazamientos[] = {-4,-3,-2,-1,0,1,2,3,4};
     int desplazamientos[] = {-1,0,1};
-    int len_desp = 9;
+    int len_desp = 3;
     float n_i = 0;
     bool esVecino = false;
     float total = 0.0;
@@ -1671,3 +1671,32 @@ void degradeDiscrete(nanovdb::FloatGrid* gridEndothelialDiscrete, nanovdb::Float
 //     thrust::counting_iterator<uint64_t, thrust::device_system_tag> iter(0);
 //     thrust::for_each(iter, iter + 512*leafCount, kernel);
 // }
+
+void albedoTotal(nanovdb::FloatGrid* oxygen,nanovdb::FloatGrid*melanine,nanovdb::Vec3fGrid* albedo,u_int64_t leafCount){
+    auto kernel = [oxygen,melanine,albedo] __device__ (const uint64_t n) {
+        auto *leaf_Oxygen= oxygen->tree().getFirstNode<0>() + (n >> 9);
+        auto *leaf_Melanine = melanine->tree().getFirstNode<0>() + (n >> 9);
+        auto *leaf_albedo = albedo->tree().getFirstNode<0>() + (n >> 9 );
+        const int i = n & 511;
+        auto coord = leaf_Oxygen->offsetToGlobalCoord(i);
+        float o2Concentration = leaf_Oxygen->getValue(i);
+        float melanineConcentration = leaf_Melanine->getValue(i);
+        float total = o2Concentration + melanineConcentration;
+        o2Concentration = o2Concentration *0 ;/// total;
+        melanineConcentration = melanineConcentration ;/// total;
+        nanovdb::Vec3f base_color = {1,203.0/256.0,190.0/256.0};
+        nanovdb::Vec3f melanine_color = {230.0/256.0,191.0/256.0,170.0/256.0};
+        nanovdb::Vec3f hemoglobin_color = {230.0/256.0,10/256.0,10.0/256.0};
+        nanovdb::Vec3f new_albedo;
+        for(int i = 0 ;i<3;i++){
+            new_albedo[i] = base_color[i] * (1- o2Concentration - melanineConcentration) + melanine_color[i] * melanineConcentration + hemoglobin_color[i] * o2Concentration;
+        }
+        // for(int i = 0; i<3;i++){
+        //     new_albedo[i] = 1.0 - new_albedo[i];
+        // }
+        leaf_albedo->setValueOnly(coord,new_albedo);
+
+    };
+    thrust::counting_iterator<uint64_t, thrust::device_system_tag> iter(0);
+    thrust::for_each(iter, iter + 512*leafCount, kernel);
+}

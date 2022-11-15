@@ -42,5 +42,6 @@ void addDeadCells(nanovdb::FloatGrid* gridBminus,nanovdb::FloatGrid* gridDeadCel
 void newTips(nanovdb::FloatGrid* gridEndothelialTip,nanovdb::FloatGrid* gridEndothelialDiscrete,nanovdb::FloatGrid* gridTAF,int seed,int leafCount);
 void closeTips(nanovdb::FloatGrid* gridEndothelialTip, nanovdb::FloatGrid* gridTummorCells,uint64_t leafCount);
 void degradeDiscrete(nanovdb::FloatGrid* gridEndothelialDiscrete, nanovdb::FloatGrid* gridTummorCells,uint64_t leafCount);
+void albedoTotal(nanovdb::FloatGrid* oxygen,nanovdb::FloatGrid*melanine,nanovdb::Vec3fGrid* albedo,u_int64_t leafCount);
 
 #endif
