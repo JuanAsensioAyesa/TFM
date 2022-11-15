@@ -25,7 +25,7 @@ int main(int argc , char* argv[]){
     gridTummor.upload();
     
     uint64_t nodeCount = gridOxygen.getPtrNano1(typePointer::CPU)->tree().nodeCount(0);
-    for(int j = 0 ;j < 5 ;j++){
+    for(int j = 0 ;j < 1 ;j++){
                 average(gridTummor.getPtrNano1(typePointer::DEVICE),gridAux.getPtrNano1(typePointer::DEVICE),nodeCount);
                 copy(gridAux.getPtrNano1(typePointer::DEVICE),gridTummor.getPtrNano1(typePointer::DEVICE),nodeCount);
                 //generateEndothelial(nanoFloatMap1.at("Oxygen"),nodeCount,-39,-130,5);
