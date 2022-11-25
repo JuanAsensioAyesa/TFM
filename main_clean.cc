@@ -218,10 +218,16 @@ int main(int argc ,char * argv[]){
     diffussionCoef.valueBasale = 8.3 / max_paper * max_diffussion;
     diffussionCoef.valueDermis = 41.5 / max_paper * max_diffussion;
     diffussionCoef.valueHipoDermis = 20. / max_paper * max_diffussion;
+    // diffussionCoef.valueCorneum = 1;
+    // diffussionCoef.valueSpinosum = 2;
+    // diffussionCoef.valueBasale = 3;
+    // diffussionCoef.valueDermis = 4;
+    // diffussionCoef.valueHipoDermis = 5;
     auto accessorDif = gridsFloat.at("Diffusion")->getAccessorOpen1();
     openvdb::Coord coord_dif;
     createSkin(accessorDif,size_lado,profundidad_total,coord_dif,diffussionCoef);
     std::cout<<"Ey"<<std::endl;
+    std::cout<<"Corneum " <<diffussionCoef.valueCorneum<<" Spinosum "<<diffussionCoef.valueSpinosum<<" Basale "<<diffussionCoef.valueBasale<<" Dermis "<<diffussionCoef.valueDermis<<" HipoDermis "<<diffussionCoef.valueHipoDermis<<std::endl;
 
     fillRandomAll<Grid<Vec3,nanovdb::Vec3f,Vec3Open,Vec3Open::Ptr,Vec3Nano>>(gridsVec);
     std::cout<<"Ey"<<std::endl;

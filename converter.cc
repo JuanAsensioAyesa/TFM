@@ -2,15 +2,22 @@
 #include "utilGrid/Grid.hpp"
 #include <string>
 #include "albedoKernel.h"
+#include <stdlib.h>     /* atoi */
+
 using namespace std;
 
 int main(int argc , char* argv[]){
     using Vec3 = openvdb::Vec3s;
     using  Vec3Open = openvdb::Vec3SGrid ;
     using Vec3Nano = nanovdb::Vec3fGrid;
-    cout<<"Hola"<<std::endl;
-    string filenameTummor = "../grids/new/TummorCells360.vdb";
-    string filenameO2 = "../grids/new/Oxygen360.vdb";
+    if(argc < 4){
+        std::cout<<"Converter gridTummor gridOxygen i"<<std::endl;
+        return -1;
+    }
+    
+    string filenameTummor = std::string(argv[1]);
+    string filenameO2 = std::string(argv[2]);
+    int iFile = atoi(argv[3]);
     Grid<> gridOxygen(filenameO2);
     Grid<> gridTummor(filenameTummor);
     openvdb::Vec3s ini = {0.0,0.0,0.0};
@@ -23,8 +30,9 @@ int main(int argc , char* argv[]){
     gridAux.upload();
     gridOxygen.upload();
     gridTummor.upload();
-    
+    //std::cout<<"Ey"<<std::endl;
     uint64_t nodeCount = gridOxygen.getPtrNano1(typePointer::CPU)->tree().nodeCount(0);
+    //std::cout<<"Ey"<<std::endl;
     for(int j = 0 ;j < 1 ;j++){
                 average(gridTummor.getPtrNano1(typePointer::DEVICE),gridAux.getPtrNano1(typePointer::DEVICE),nodeCount);
                 copy(gridAux.getPtrNano1(typePointer::DEVICE),gridTummor.getPtrNano1(typePointer::DEVICE),nodeCount);
@@ -40,7 +48,7 @@ int main(int argc , char* argv[]){
     gridOxygen.copyNanoToOpen();
     
     // gridOxygen.writeToFile("../grids/readedEndothelial.vdb");
-    albedoOxygen.writeToFile("../grids/albedoOxygen.vdb");
+    albedoOxygen.writeToFile("/home/juanasensio/Desktop/TFM/codigo/grids/albedoOxygen_"+std::to_string(iFile)+".vdb");
     
 
     return 0;

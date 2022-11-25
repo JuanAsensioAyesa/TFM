@@ -9,4 +9,6 @@
 void albedoTotal(nanovdb::FloatGrid* oxygen,nanovdb::FloatGrid*melanine,nanovdb::Vec3fGrid* albedo,u_int64_t leafCount);
 void average(nanovdb::FloatGrid* grid,nanovdb::FloatGrid* destiny,u_int64_t leafCount);
 void copy(nanovdb::FloatGrid* source ,nanovdb::FloatGrid* destiny,u_int64_t leafCount);
+void product(nanovdb::FloatGrid* source ,float factor,u_int64_t leafCount);
+void add(nanovdb::FloatGrid* source ,nanovdb::FloatGrid* destiny,u_int64_t leafCount);
 #endif
